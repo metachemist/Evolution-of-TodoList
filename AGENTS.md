@@ -102,6 +102,20 @@ When creating new files:
 - **Check Workflow**: Confirm all work follows SDD loop (Specify → Plan → Tasks → Implement)
 - **Validate Security**: Ensure JWT tokens, user isolation, and proper validation
 
+### Forbidden Practices (Constitution Section 15)
+1. **Violate the mandatory monorepo structure** - Don't create flat specs/ folder without 1-specify/2-plan/3-tasks
+2. **Generate code without a Task ID reference**
+3. **Modify architecture without updating `specs/2-plan/`**
+4. **Add features without updating `specs/1-specify/`**
+5. **Change tech stack without constitutional amendment**
+6. **Commit secrets or credentials to Git**
+7. **Use synchronous I/O for network/database calls**
+8. **Write SQL directly instead of using ORM**
+9. **Skip error handling for external calls**
+10. **Create stateful services (holding session in memory)**
+11. **Deploy without testing in Minikube first (Phase IV+)**
+12. **Create service directories without CLAUDE.md** (Phase II+)
+
 ### Conflict Resolution
 When encountering conflicts:
 1. Apply constitutional hierarchy (constitution → specs → tasks → implementation)

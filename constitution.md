@@ -58,7 +58,7 @@ This project **MUST** use the following monorepo structure. Deviations are not p
 
 ```
 evolution-of-todo-list-01/
-├── constitution.md                 # The Supreme Law (Principles & Constraints)
+├── constitution.md                 # The Supreme Law (Principles & Constraints) this file.
 ├── AGENTS.md                      # AI Agent Instructions (The "How-To")
 ├── CLAUDE.md                      # Claude Code entry point (Shim to AGENTS.md)
 ├── README.md                      # Project onboarding
@@ -910,15 +910,5 @@ Every line of code, every architectural decision, every deployment strategy must
 **Version History:**
 - v1.0 (2026-02-04): Initial constitution for Hackathon II
 
-**Maintainers:**
-- Panaversity Team
-- PIAIC Team
-- GIAIC Team
-
-**Contact:** For constitutional amendments or clarifications, consult project mentors or submit via GitHub Issues.
-
----
-
-*"The constitution is the compass. The specs are the map. The code is the journey."*
 
 **Version**: 1.0.1 | **Ratified**: 2026-02-04 | **Last Amended**: 2026-02-04
