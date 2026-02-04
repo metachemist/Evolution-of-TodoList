@@ -1,0 +1,134 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Dependencies
+node_modules/
+uv.lock
+
+# Local environment settings
+.env
+.env.local
+.env.backup
+.env.dev
+.env.prod
+.env.staging
+.env.testing
+.env.development
+.env.production
+.env.build
+.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+.DS_Store?
+ehthumbs.db
+Icon?
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+.tox/
+.nox/
+
+# Documentation
+docs/_build/
+
+# Distribution
+*.tar.gz
+
+# Testing
+.pytest_cache/
+.hypothesis/
+.coverage.*
+
+# Database
+*.sqlite
+*.db
+
+# Docker
+.dockerenv
+.dockerinit
+
+# Kubernetes
+.kube/
+
+# CLAUDE.md and AGENTS.md backups (if any)
+CLAUDE.md.bak
+AGENTS.md.bak
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+tmp/
+temp/
+
+# Compiled assets
+.next/
+dist/
+out/
+build/
+
+# Local config
+config/local.*
+config/development.*
+config/staging.*
+config/production.*
+
+# Secrets backup
+*.secret
+*.key
+*.pem
+*.crt
+*.cert
+*.p12
+*.jks
+
+# Cache directories
+.cache/
+.cargo/
+.pip/
