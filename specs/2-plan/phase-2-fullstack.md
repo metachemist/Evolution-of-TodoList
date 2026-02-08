@@ -500,7 +500,7 @@ CREATE INDEX idx_tasks_title_gin ON tasks USING gin(title gin_trgm_ops);
 - **JWT Tokens**: Authentication without server-side sessions
 - **Monorepo Structure**: All code in single repository following spec structure
 - **Constitutional Compliance**: Adherence to technology stack requirements (Next.js 16+, FastAPI, SQLModel, PostgreSQL, Better Auth)
-- **Password Complexity**: Minimum 8 characters with uppercase (A-Z), lowercase (a-z), numbers (0-9), and special characters (!@#$%^&*)
+- **Password Complexity**: Minimum 8 characters, maximum 20 characters, with at least one special character (!@#$%^&*)
 - **Hashing Algorithm**: Passwords must be hashed using bcrypt with cost factor 12 and automatic salt generation
 - **Token Duration**: JWT tokens must expire after exactly 1 hour (3600 seconds) from issue time
 - **Rate Limiting**: Authentication endpoints must implement rate limiting (max 5 attempts per IP per 15 minutes) to prevent brute force attacks; implemented using in-memory storage with IP-based tracking
@@ -532,7 +532,7 @@ CREATE INDEX idx_tasks_title_gin ON tasks USING gin(title gin_trgm_ops);
 - **Token Generation**: JWT creation and signing must complete within 50ms
 
 ### Security Constraints (Constitutional Requirements)
-- **Password Hashing**: All passwords must be stored with bcrypt hashing (cost factor 12) with automatic salt generation; no other hashing algorithms permitted; password validation must include minimum 8 characters with uppercase, lowercase, numbers, and special characters; per Constitution 403 (security hashing requirements)
+- **Password Hashing**: All passwords must be stored with bcrypt hashing (cost factor 12) with automatic salt generation; no other hashing algorithms permitted; password validation must include minimum 8 characters, maximum 20 characters, with at least one special character; per Constitution 403 (security hashing requirements)
 - **Token Security**: JWT tokens must be properly signed with BETTER_AUTH_SECRET using HS256 algorithm and validated on each request; tokens must include exactly user_id (string), email (string), exp (timestamp), iat (timestamp), and iss (string: "todo-app-auth-service") claims as specified; token expiration strictly enforced at exactly 3600 seconds from issue with no tolerance; all token validation must complete within 100ms; token validation must reject any tokens with missing or invalid claims; per Constitution 404-405 (token security requirements)
 - **Input Validation**: All user inputs must be validated server-side using Pydantic models with strict type checking regardless of client-side validation; no raw SQL queries permitted, only ORM-based database access; validation must include bounds checking, type validation, and format verification; per Constitution 491 (validation requirements)
 - **Input Sanitization**: All user inputs must be sanitized using DOMPurify for HTML content and proper output encoding for display; prevent XSS by encoding special characters in user-generated content; per Constitution 408 (input sanitization requirements)

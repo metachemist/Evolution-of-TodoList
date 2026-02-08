@@ -1,1 +1,53 @@
-# Python requirements for Todo Evolution project
+[tool.poetry]
+name = "todo-evolution"
+version = "0.1.0"
+description = "Todo Evolution project - A sophisticated todo list application with AI capabilities"
+authors = ["Metachemist <metachemist@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+pytest-asyncio = "^0.25.0"
+black = "^24.8.0"
+flake8 = "^7.1.1"
+mypy = "^1.11.2"
+isort = "^5.13.2"
+uv = "^0.5.4"
+httpx = "^0.27.2"
+sqlmodel = "^0.0.22"
+fastapi = "^0.115.0"
+uvicorn = "^0.32.0"
+python-multipart = "^0.0.20"
+python-dotenv = "^1.0.1"
+better-exceptions = "^0.3.3"
+pydantic = "^2.10.0"
+pydantic-settings = "^2.10.0"
+asyncpg = "^0.30.0"
+alembic = "^1.14.0"
+bcrypt = "^4.0.1"
+python-jose = {version = "^3.3.0", extras = ["cryptography"]}
+passlib = {version = "^1.7.4", extras = ["bcrypt"]}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

@@ -20,11 +20,11 @@ This feature encompasses the following domain entities:
 ### FR-2.1: User Registration and Authentication
 **Input:**
 - Email (string, required, valid email format)
-- Password (string, required, minimum 8 characters with complexity requirements)
+- Password (string, required, minimum 8 characters with at least one special character)
 
 **Process:**
 1. Validate email format using standard email validation rules
-2. Validate password strength (minimum 8 characters, including uppercase, lowercase, numbers, special characters)
+2. Validate password strength (minimum 8 characters, maximum 20 characters, with at least one special character)
 3. Check if email already exists in the system
 4. Hash the password using bcrypt with cost factor 12
 5. Create new user record in database with hashed password
@@ -37,7 +37,7 @@ JWT token for immediate authentication and user information
 
 **Error Cases:**
 - Invalid email format → 400 "Invalid email format"
-- Weak password → 400 "Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters"
+- Weak password → 400 "Password must be 8-20 characters with at least one special character"
 - Email already exists → 409 "Email already registered"
 - Database connection failed → 500 "Registration failed. Please try again."
 - Internal server error → 500 "An unexpected error occurred"
@@ -164,7 +164,8 @@ The JWT tokens follow the standard three-part structure (header.payload.signatur
       "password": {
         "type": "string",
         "minLength": 8,
-        "description": "Password with minimum 8 chars including uppercase, lowercase, numbers, special chars"
+        "maxLength": 20,
+        "description": "Password with 8-20 chars with at least one special character"
       }
     },
     "required": ["email", "password"]
@@ -172,7 +173,7 @@ The JWT tokens follow the standard three-part structure (header.payload.signatur
   ```
 - **Process**:
   1. Validate email format using RFC 5322 standards
-  2. Validate password strength (8+ chars with mixed case, numbers, special chars)
+  2. Validate password strength (8-20 chars with at least one special character)
   3. Check if email already exists in users table (case-insensitive)
   4. Hash password using bcrypt with cost factor 12
   5. Create new user record in database with hashed password
@@ -181,7 +182,7 @@ The JWT tokens follow the standard three-part structure (header.payload.signatur
 - **Output**: Object containing user information (id, email, created_at) and JWT token
 - **Error Cases**:
   - Invalid email format → 400 "Invalid email format. Please provide a valid email address."
-  - Weak password → 400 "Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters."
+  - Weak password → 400 "Password must be 8-20 characters with at least one special character."
   - Email already exists → 409 "Email already registered. Please use a different email address."
   - Database connection failed → 500 "Registration failed. Please try again later."
   - Server configuration error → 500 "An unexpected error occurred during registration."
@@ -348,7 +349,7 @@ The JWT tokens follow the standard three-part structure (header.payload.signatur
 ## Constraints
 
 ### Technical Constraints
-- **Password Complexity**: Minimum 8 characters with uppercase (A-Z), lowercase (a-z), numbers (0-9), and special characters (!@#$%^&*)
+- **Password Complexity**: Minimum 8 characters, maximum 20 characters, with at least one special character (!@#$%^&*)
 - **Hashing Algorithm**: Passwords must be hashed using bcrypt with cost factor 12 and automatic salt generation
 - **Token Duration**: JWT tokens must expire after exactly 1 hour (3600 seconds) from issue time
 - **Rate Limiting**: Authentication endpoints must implement rate limiting (max 5 attempts per IP per 15 minutes) to prevent brute force attacks; implemented using in-memory storage with IP-based tracking
@@ -375,7 +376,7 @@ The JWT tokens follow the standard three-part structure (header.payload.signatur
 - **User Enumeration Prevention**: Same generic error message "Invalid credentials" for both invalid email and wrong password to prevent user enumeration
 - **CSRF Protection**: Secure token storage using httpOnly cookies or proper XSS prevention for localStorage
 - **User Isolation**: Strict enforcement of user data boundaries with user_id validation from JWT vs URL parameter
-- **Password Requirements**: All passwords must meet minimum complexity requirements (8+ chars with mixed case, numbers, specials)
+- **Password Requirements**: All passwords must meet minimum complexity requirements (8-20 chars with at least one special character)
 - **Audit Logging**: All authentication and authorization attempts must be logged for security monitoring
 - **Rate Limiting**: Implementation of account lockout after 5 failed login attempts per 15-minute window
 

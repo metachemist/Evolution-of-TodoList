@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "framer-motion": "^12.33.0",
+    "tailwindcss-animate": "^1.0.7"
+  }
+}
