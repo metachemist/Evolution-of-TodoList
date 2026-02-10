@@ -76,21 +76,14 @@ async def get_current_user(
 
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        user_identifier: str = payload.get("sub")
-        if user_identifier is None:
+        user_id: str = payload.get("sub")
+        if user_id is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    # Determine if the identifier is an email or user ID
-    # If it's numeric, treat as user ID; otherwise, treat as email
-    if user_identifier.isdigit():
-        # Query for the user by ID
-        statement = select(User).where(User.id == int(user_identifier))
-    else:
-        # Query for the user by email
-        statement = select(User).where(User.email == user_identifier)
-
+    # Query for the user by ID (since we now store the user ID as a string in the token)
+    statement = select(User).where(User.id == user_id)
     result = await session.exec(statement)
     user = result.first()
 

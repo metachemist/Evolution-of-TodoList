@@ -35,7 +35,7 @@ async def register(user: UserCreate, session: Annotated[AsyncSession, Depends(ge
     # Generate JWT token
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
-        data={"sub": db_user.email}, expires_delta=access_token_expires
+        data={"sub": str(db_user.id), "user_id": str(db_user.id), "email": db_user.email}, expires_delta=access_token_expires
     )
 
     return {"data": {"token": access_token, "user": db_user}}
@@ -54,7 +54,7 @@ async def login(user_credentials: UserCreate, session: Annotated[AsyncSession, D
 
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": str(user.id), "user_id": str(user.id), "email": user.email}, expires_delta=access_token_expires
     )
 
     return {"data": {"token": access_token, "user": user}}

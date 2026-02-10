@@ -8,6 +8,7 @@ from src.mcp.server import router as mcp_router
 import os
 
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create DB tables on startup
