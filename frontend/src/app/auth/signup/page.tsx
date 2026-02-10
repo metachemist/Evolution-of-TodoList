@@ -8,10 +8,12 @@ export default function SignUpPage() {
   const router = useRouter();
   
   return (
+     <div className="container min-h-screen min-w-screen flex bg-stone-100 items-center justify-center">
     <AuthGuard requireAuth={false}>
       <div className="container mx-auto py-10 flex items-center justify-center">
         <SignUpForm onSwitchToSignIn={() => router.push('/auth/signin')} />
       </div>
     </AuthGuard>
+    </div>
   );
 }

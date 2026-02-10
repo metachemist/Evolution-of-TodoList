@@ -1,17 +1,17 @@
 'use client';
-
-import { SignInForm } from '@/components/SignInForm';
-import { AuthGuard } from '@/components/AuthGuard';
 import { useRouter } from 'next/navigation';
+import { SignInForm } from '@/components/SignInForm'; // Check your import path
+import { AuthGuard }from '@/components/AuthGuard'; // Check your import path
 
 export default function SignInPage() {
   const router = useRouter();
-  
+
   return (
-    <AuthGuard requireAuth={false}>
-      <div className="container mx-auto py-10 flex items-center justify-center">
+    // Only the background color and centering logic remains here.
+    <div className="min-h-screen w-full flex items-center justify-center bg-stone-100">
+      <AuthGuard requireAuth={false}>
         <SignInForm onSwitchToSignUp={() => router.push('/auth/signup')} />
-      </div>
-    </AuthGuard>
+      </AuthGuard>
+    </div>
   );
 }

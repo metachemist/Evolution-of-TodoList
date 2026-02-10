@@ -15,7 +15,7 @@ export default function DashboardPage() {
 
   return (
     <AuthGuard requireAuth={true}>
-      <div className="container min-h-screen bg-slate-50 flex flex-col">
+      <div className="container min-h-screen min-w-screen p-10 bg-slate-50 flex flex-col">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold">Dashboard</h1>

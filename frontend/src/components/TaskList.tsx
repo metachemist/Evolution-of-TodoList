@@ -27,21 +27,22 @@ export function TaskList() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const { token } = useAuth(); // We don't need userId for the URL anymore!
+  const { token, userId } = useAuth(); // Get userId from auth context
 
   // Helper to get the correct Backend URL
-  // NOTE: If your backend prefix is /api/v1/tasks, change it here!
-  const API_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/tasks`;
+  const getApiUrl = (endpoint: string = '') => {
+    if (!userId) return '';
+    return `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/${userId}${endpoint}`;
+  };
 
   // Fetch tasks from the backend
   useEffect(() => {
     const fetchTasks = async () => {
-      if (!token) return;
+      if (!token || !userId) return;
 
       try {
         setLoading(true);
-        // 👇 FIXED: Removed ${userId} from the URL
-        const response = await fetch(API_URL, {
+        const response = await fetch(getApiUrl('/tasks'), {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -63,15 +64,17 @@ export function TaskList() {
     };
 
     fetchTasks();
-  }, [token]);
+  }, [token, userId]);
 
   // Handle creating a new task
   const handleCreateTask = async (title: string, description: string) => {
-    if (!token) return;
+    if (!token || !userId) return;
+    
+    const url = getApiUrl('/tasks');
+    if (!url) return;
 
     try {
-      // 👇 FIXED: Removed ${userId} from the URL
-      const response = await fetch(API_URL, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,11 +99,13 @@ export function TaskList() {
 
   // Handle updating a task
   const handleUpdateTask = async (id: number, title: string, description: string) => {
-    if (!token) return;
+    if (!token || !userId) return;
+
+    const url = getApiUrl(`/tasks/${id}`);
+    if (!url) return;
 
     try {
-      // 👇 FIXED: URL is now just /api/tasks/{task_id}
-      const response = await fetch(`${API_URL}/${id}`, {
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -125,11 +130,13 @@ export function TaskList() {
 
   // Handle deleting a task
   const handleDeleteTask = async (id: number) => {
-    if (!token) return;
+    if (!token || !userId) return;
+
+    const url = getApiUrl(`/tasks/${id}`);
+    if (!url) return;
 
     try {
-      // 👇 FIXED: URL is now just /api/tasks/{task_id}
-      const response = await fetch(`${API_URL}/${id}`, {
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -149,20 +156,21 @@ export function TaskList() {
 
   // Handle toggling task completion
   const handleToggleCompletion = async (id: number) => {
-    if (!token) return;
+    if (!token || !userId) return;
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
+    const url = getApiUrl(`/tasks/${id}/complete`);
+    if (!url) return;
+
     try {
-      // 👇 FIXED: URL is now just /api/tasks/{task_id}
-      // Note: Backend might expect PUT for updates, verify your route!
-      const response = await fetch(`${API_URL}/${id}`, {
-        method: 'PUT', // Or PATCH, depending on your backend
+      const response = await fetch(url, {
+        method: 'PATCH', // Using PATCH as defined in backend
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ ...task, completed: !task.completed }),
+        body: JSON.stringify({ completed: !task.completed }),
       });
 
       if (!response.ok) {

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import Notification from './Notification';
+// import Notification from './Notification'; // Uncomment if you are using this
 
 type SignInFormProps = {
   onSwitchToSignUp: () => void;
@@ -18,25 +18,13 @@ export function SignInForm({ onSwitchToSignUp }: SignInFormProps) {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
   const router = useRouter();
   const { login } = useAuth();
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string; general?: string } = {};
-
-    // Email validation
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email address is invalid';
-    }
-
-    // Password validation
-    if (!password) {
-      newErrors.password = 'Password is required';
-    }
-
+    if (!email) newErrors.email = 'Email is required';
+    if (!password) newErrors.password = 'Password is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -45,30 +33,40 @@ export function SignInForm({ onSwitchToSignUp }: SignInFormProps) {
     e.preventDefault();
     if (!validateForm()) return;
 
-    setLoading(true);
+    setLoading(true); // START LOADING: This triggers the spinner view
     try {
       await login(email, password);
-      // Redirect to dashboard or home page after successful login
       router.push('/dashboard');
-      setNotification({ message: 'Login successful!', type: 'success' });
     } catch (error: any) {
       console.error('Login error:', error);
-      setErrors({ 
-        ...errors, 
-        general: error.message || 'Login failed. Please check your credentials.' 
-      });
-      setNotification({ message: error.message || 'Login failed. Please check your credentials.', type: 'error' });
-    } finally {
-      setLoading(false);
+      setErrors({ ...errors, general: error.message || 'Login failed.' });
+      setLoading(false); // Stop loading on error so they can try again
     }
   };
 
+  // 1. LOADING STATE: If loading, show ONLY the spinner (No text, no form)
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-100 w-full max-w-md mx-auto bg-white rounded-lg shadow-lg">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // 2. NORMAL STATE: Show Text + Form
   return (
-    <>
-      <Card className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto">
+        
+      {/* MOVED TEXT HERE: This is now part of the component */}
+      <div className="flex flex-col gap-2 mb-6 text-center">
+        <span className="text-2xl font-bold">Welcome to Todo App</span>
+        <span className="text-sm text-muted-foreground">Please sign in to continue</span>
+      </div>
+
+      <Card>
         <CardHeader>
           <CardTitle>Sign In</CardTitle>
-          <CardDescription>Welcome back! Please sign in to continue</CardDescription>
+          <CardDescription>Enter your credentials below</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -99,21 +97,21 @@ export function SignInForm({ onSwitchToSignUp }: SignInFormProps) {
             </div>
             
             {errors.general && (
-              <div className="rounded-md bg-destructive/15 p-4">
-                <p className="text-sm text-destructive">{errors.general}</p>
+              <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+                {errors.general}
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing In...' : 'Sign In'}
+          <CardFooter className="flex flex-col gap-4">
+            <Button type="submit" className="w-full">
+              Sign In
             </Button>
-            <p className="mt-4 text-sm text-muted-foreground">
+            <p className="text-sm text-center text-muted-foreground">
               Don't have an account?{' '}
               <button
                 type="button"
                 onClick={onSwitchToSignUp}
-                className="text-primary underline-offset-4 hover:underline"
+                className="text-primary hover:underline font-medium"
               >
                 Sign Up
               </button>
@@ -121,13 +119,6 @@ export function SignInForm({ onSwitchToSignUp }: SignInFormProps) {
           </CardFooter>
         </form>
       </Card>
-      {notification && (
-        <Notification 
-          message={notification.message} 
-          type={notification.type} 
-          onClose={() => setNotification(null)} 
-        />
-      )}
-    </>
+    </div>
   );
 }
