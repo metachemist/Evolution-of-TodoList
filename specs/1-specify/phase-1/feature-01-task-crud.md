@@ -311,8 +311,8 @@ class TaskBase(SQLModel):
 class Task(TaskBase, table=True):
     id: int = Field(primary_key=True)
     user_id: str = Field(index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class TaskCreate(TaskBase):
     pass
