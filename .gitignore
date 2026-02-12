@@ -131,3 +131,7 @@ config/production.*
 .cache/
 .cargo/
 .pip/
+
+# Agent skill directories (local config, not shared)
+.claude/skills/
+.qwen/skills/
