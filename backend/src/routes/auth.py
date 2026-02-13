@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from ..database import get_db_session
 from ..schemas.user import UserCreate, UserLogin
 from ..schemas.common import TokenResponse
 from ..services.auth_service import create_user, authenticate_user, get_user_by_email
-from ..utils.auth import create_access_token
+from ..services.user_service import get_user_by_id
+from ..utils.auth import (
+    create_access_token,
+    get_current_user_id,
+    set_auth_cookie,
+    clear_auth_cookie,
+)
 from ..utils.helpers import create_error_response
 
 
@@ -14,6 +20,7 @@ router = APIRouter(tags=["auth"])
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
+    response: Response,
     db: AsyncSession = Depends(get_db_session),
 ):
     """Register a new user and return an access token."""
@@ -30,12 +37,14 @@ async def register(
 
     user = await create_user(db, user_data.email, user_data.password)
     token = create_access_token(data={"sub": str(user.id)})
+    set_auth_cookie(response, token)
     return TokenResponse(access_token=token)
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
     user_data: UserLogin,
+    response: Response,
     db: AsyncSession = Depends(get_db_session),
 ):
     """Authenticate a user and return an access token."""
@@ -51,4 +60,27 @@ async def login(
         )
 
     token = create_access_token(data={"sub": str(user.id)})
+    set_auth_cookie(response, token)
     return TokenResponse(access_token=token)
+
+
+@router.get("/me")
+async def me(
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Return the current authenticated user's info."""
+    user = await get_user_by_id(db, current_user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return {"id": str(user.id), "email": user.email}
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """Clear the auth cookie."""
+    clear_auth_cookie(response)
+    return {"message": "Logged out successfully"}

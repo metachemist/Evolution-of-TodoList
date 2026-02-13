@@ -63,3 +63,10 @@ def make_auth_header(user_id: str | None = None) -> dict:
     uid = user_id or str(uuid4())
     token = create_access_token(data={"sub": uid})
     return {"Authorization": f"Bearer {token}"}
+
+
+def make_auth_cookie(user_id: str | None = None) -> dict:
+    """Generate an auth cookie dict for a given (or random) user_id."""
+    uid = user_id or str(uuid4())
+    token = create_access_token(data={"sub": uid})
+    return {"access_token": token}

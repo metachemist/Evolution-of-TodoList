@@ -4,7 +4,7 @@ from uuid import uuid4
 from src.models.user import User
 from src.models.task import Task
 from src.utils.auth import get_password_hash
-from tests.conftest import make_auth_header
+from tests.conftest import make_auth_header, make_auth_cookie
 
 
 @pytest.mark.asyncio
@@ -163,3 +163,22 @@ async def test_pagination_defaults(client, db_session):
     # skip=20 should return remaining 5
     resp = await client.get(f"/api/{user.id}/tasks?skip=20", headers=headers)
     assert len(resp.json()) == 5
+
+
+@pytest.mark.asyncio
+async def test_get_tasks_with_cookie_auth(client, db_session):
+    """GET /api/{user_id}/tasks works with cookie-based auth."""
+    user = User(email="cookie-tasks@test.com", hashed_password=get_password_hash("pw"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(title="Cookie Task", owner_id=user.id)
+    db_session.add(task)
+    await db_session.commit()
+
+    cookies = make_auth_cookie(str(user.id))
+    resp = await client.get(f"/api/{user.id}/tasks", cookies=cookies)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["title"] == "Cookie Task"
