@@ -93,6 +93,11 @@ When users encounter errors (validation, authentication, etc.), the system shoul
 - **FR-014**: System MUST provide user registration endpoint (POST /api/auth/register) that creates a user and returns a JWT token
 - **FR-015**: System MUST provide user login endpoint (POST /api/auth/login) that validates credentials and returns a JWT token
 - **FR-016**: System MUST support pagination on task list endpoints with configurable skip/limit (default 20, max 100)
+- **FR-017**: Backend MUST set httpOnly cookie containing JWT on login/register responses
+- **FR-018**: Backend MUST provide `GET /api/auth/me` endpoint to return the current authenticated user
+- **FR-019**: Backend MUST provide `POST /api/auth/logout` endpoint to clear the auth cookie
+- **FR-020**: `get_current_user_id` MUST support both Bearer header and httpOnly cookie for token extraction (header takes priority)
+- **FR-021**: CORS MUST use specific origins (not `*`) when credentials are enabled
 
 ### Technical Constraints
 
@@ -133,6 +138,7 @@ The following features are explicitly NOT part of this specification and will be
 - File attachments to tasks
 - Bulk operations on tasks
 - Task search or filtering beyond basic retrieval
+- Token refresh mechanism
 
 ## Error Handling Specifications
 

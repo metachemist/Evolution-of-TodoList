@@ -150,3 +150,22 @@ Final implementation touches and cross-cutting concerns.
 - [X] T059 Document operational procedures in docs/operations.md
 - [X] T060 Run full test suite and verify all functionality
 - [X] T061 Perform final code review and documentation verification
+
+---
+
+## Phase 8: Cookie-Based Authentication
+
+Add httpOnly cookie support for JWT storage, enabling frontend session management alongside existing Bearer token auth.
+
+**Goal**: Support dual-mode authentication (Bearer header + httpOnly cookie) with session check and logout endpoints.
+
+**Independent Test**: Can be tested by registering/logging in, verifying Set-Cookie headers, calling /me with cookie, and calling /logout.
+
+- [ ] T062 Add cookie constants (COOKIE_NAME, ACCESS_TOKEN_MAX_AGE, COOKIE_SECURE) to src/utils/auth.py
+- [ ] T063 Rewrite get_current_user_id(request: Request) for dual-mode auth (header first, cookie fallback) in src/utils/auth.py
+- [ ] T064 Add set_auth_cookie() and clear_auth_cookie() helper functions in src/utils/auth.py
+- [ ] T065 Modify register() and login() to set httpOnly cookie on response in src/routes/auth.py
+- [ ] T066 Add GET /api/auth/me endpoint (returns current user info) in src/routes/auth.py
+- [ ] T067 Add POST /api/auth/logout endpoint (clears auth cookie) in src/routes/auth.py
+- [ ] T068 Fix CORS: replace allow_origins=["*"] with env-based ALLOWED_ORIGINS in src/main.py
+- [ ] T069 Write tests for cookie auth, /me, /logout, and backward compatibility in tests/

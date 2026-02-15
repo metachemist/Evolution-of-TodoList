@@ -126,10 +126,17 @@ backend/
 ### 2. Authentication & Authorization Layer
 - **JWT Token Extraction**: From Authorization header as Bearer token
 - **User ID Dependency**: `get_current_user_id` function to extract user ID
-  - Function signature: `async def get_current_user_id(authorization: str = Header(...)) -> str`
-  - Extracts JWT from "Authorization: Bearer <token>" header
+  - Function signature: `async def get_current_user_id(request: Request) -> str`
+  - Dual-mode auth: tries Authorization header first, falls back to httpOnly cookie
   - Validates token signature and expiration
   - Returns user ID from token claims
+- **Cookie-Based Authentication**:
+  - `COOKIE_NAME = "access_token"`, `ACCESS_TOKEN_MAX_AGE = 900` (15 min)
+  - `COOKIE_SECURE` from env (false in dev, true in prod)
+  - `set_auth_cookie(response, token)`: Sets httpOnly, SameSite=Lax cookie on login/register
+  - `clear_auth_cookie(response)`: Clears auth cookie on logout
+  - `GET /api/auth/me`: Returns current user info from token (session check)
+  - `POST /api/auth/logout`: Clears auth cookie (unauthenticated — clearing a non-existent cookie is harmless)
 - **Access Validation**: Verify user_id in URL path matches authenticated user
 - **Database Verification**: Confirm task ownership through database lookup
 - **Auth Middleware**: Custom middleware to handle authentication flow
@@ -158,6 +165,9 @@ backend/
   - PUT /api/{user_id}/tasks/{id} - Update task details
   - DELETE /api/{user_id}/tasks/{id} - Delete task
   - PATCH /api/{user_id}/tasks/{id}/complete - Toggle completion status
+  - GET /api/auth/me - Return current authenticated user info
+  - POST /api/auth/logout - Clear auth cookie
+- **CORS**: `ALLOWED_ORIGINS` env var (comma-separated), defaults to `http://localhost:3000`. Required for `credentials: true`.
 - **Validation**: Pydantic schema validation for all inputs
 - **Error Handling**: Consistent error responses using middleware
 
