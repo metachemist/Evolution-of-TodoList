@@ -2,7 +2,9 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { ApiError, parseApiEnvelope } from '@/lib/api-client'
+import { BRAND_NAME } from '@/lib/brand'
 import { CLIENT_ERROR_CODES } from '@/shared/error-codes'
+import { AppBackdrop } from '@/components/ui/AppBackdrop'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
@@ -51,9 +53,17 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-[400px] rounded-lg border border-border bg-muted p-8 shadow-sm">
-        {children}
+    <main className="app-shell">
+      <AppBackdrop />
+      <div className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-10">
+        <section className="surface-panel w-full max-w-[460px] p-8 sm:p-10">
+          <div className="mb-8">
+            <p className="inline-flex items-center rounded-full border border-border-soft bg-muted/55 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+              {BRAND_NAME}
+            </p>
+          </div>
+          {children}
+        </section>
       </div>
     </main>
   )

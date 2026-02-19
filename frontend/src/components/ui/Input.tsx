@@ -26,9 +26,7 @@ export function Input({ label, error, registration, id, className = '', ...props
         aria-describedby={errorId}
         aria-invalid={error ? true : undefined}
         className={[
-          'w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground',
-          'placeholder:text-muted-foreground',
-          'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+          'input-premium',
           error ? 'border-destructive' : '',
           className,
         ].join(' ')}

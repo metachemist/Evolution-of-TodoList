@@ -30,7 +30,7 @@ test.describe('Authentication flow', () => {
 
     // Logout
     await page.click('button:has-text("Sign out")')
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/$/)
   })
 
   test('login with existing account', async ({ page }) => {

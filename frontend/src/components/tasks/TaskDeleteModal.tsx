@@ -30,7 +30,7 @@ export function TaskDeleteModal({ task, open, onOpenChange }: TaskDeleteModalPro
       <div className="flex justify-end gap-3">
         <Button
           type="button"
-          variant="ghost"
+          variant="secondary"
           size="sm"
           onClick={() => onOpenChange(false)}
         >

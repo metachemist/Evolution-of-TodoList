@@ -57,7 +57,7 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
     <Modal open={open} onOpenChange={handleOpenChange} title="Create Task">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         {serverError && (
-          <div role="alert" className="rounded-md border border-destructive px-4 py-3 text-sm text-destructive">
+          <div role="alert" className="rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {serverError}
           </div>
         )}
@@ -76,7 +76,7 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
             id="description"
             {...register('description')}
             rows={3}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="input-premium min-h-[96px] resize-y"
             placeholder="Add a description..."
           />
           {errors.description && (
@@ -85,7 +85,7 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
         </div>
 
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button type="submit" size="sm" loading={isSubmitting}>

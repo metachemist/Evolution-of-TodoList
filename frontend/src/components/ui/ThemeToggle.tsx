@@ -2,23 +2,16 @@
 // Task: T042 | ThemeToggle — sun/moon icon button using next-themes, accessible aria-label
 
 import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  // Avoid hydration mismatch
-  useEffect(() => setMounted(true), [])
-  if (!mounted) return <div className="h-8 w-8" aria-hidden="true" />
-
-  const isDark = theme === 'dark'
+  const { resolvedTheme, setTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
 
   return (
     <button
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="rounded-lg border border-border-soft bg-surface-card/70 p-1.5 text-muted-foreground transition hover:scale-[1.03] hover:bg-muted/65 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {isDark ? (
         // Sun icon (currently dark, switching to light)

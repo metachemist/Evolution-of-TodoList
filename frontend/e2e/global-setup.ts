@@ -1,6 +1,4 @@
 // Task: T050 | Playwright global setup for self-contained E2E environment
-import type { FullConfig } from '@playwright/test'
-
 const BACKEND_URL = process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://127.0.0.1:38000'
 const PROBE_TIMEOUT_MS = 5000
 const MAX_ATTEMPTS = 60
@@ -65,7 +63,7 @@ async function waitForAuthRouteReady(): Promise<void> {
   throw new Error(`Backend auth-route probe failed at ${meUrl}.`)
 }
 
-export default async function globalSetup(_config: FullConfig): Promise<void> {
+export default async function globalSetup(): Promise<void> {
   await waitForHealthReady()
   await waitForAuthRouteReady()
 }

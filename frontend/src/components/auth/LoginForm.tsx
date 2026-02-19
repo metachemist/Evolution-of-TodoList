@@ -4,7 +4,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/hooks/use-auth'
@@ -14,8 +13,6 @@ import Link from 'next/link'
 
 export function LoginForm() {
   const { login } = useAuth()
-  const searchParams = useSearchParams()
-  const reason = searchParams.get('reason')
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
@@ -40,18 +37,9 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-      {reason === 'session_expired' && (
-        <div
-          role="alert"
-          className="rounded-md border border-border bg-muted px-4 py-3 text-sm text-muted-foreground"
-        >
-          Your session has expired. Please log in again.
-        </div>
-      )}
-
+    <form onSubmit={handleSubmit(onSubmit)} className="mt-7 flex flex-col gap-4" noValidate>
       {serverError && (
-        <div role="alert" className="rounded-md border border-destructive px-4 py-3 text-sm text-destructive">
+        <div role="alert" className="rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {serverError}
         </div>
       )}
@@ -71,13 +59,13 @@ export function LoginForm() {
         error={errors.password?.message}
       />
 
-      <Button type="submit" loading={isSubmitting} className="w-full">
+      <Button type="submit" size="lg" loading={isSubmitting} className="mt-1 w-full">
         Sign in
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="font-medium text-primary hover:underline">
+        <Link href="/register" className="font-semibold text-primary transition hover:opacity-90">
           Register
         </Link>
       </p>

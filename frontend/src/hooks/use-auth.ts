@@ -29,7 +29,7 @@ export function useAuth() {
       // Proceed with logout even if the server call fails
     }
     getQueryClient().clear()
-    router.push('/login')
+    router.push('/')
     router.refresh()
   }
 

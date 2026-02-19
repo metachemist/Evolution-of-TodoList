@@ -2,7 +2,6 @@
 // Task: T008 | Error code catalog mapping backend codes to user-facing messages
 
 import {
-  BACKEND_ERROR_CODES,
   CLIENT_ERROR_CODES,
   DEFAULT_ERROR_MESSAGE,
   ERROR_MESSAGES,

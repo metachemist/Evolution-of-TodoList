@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { UserProvider } from '@/providers/UserProvider'
 import { NavBar } from '@/components/ui/NavBar'
+import { AppBackdrop } from '@/components/ui/AppBackdrop'
 import type { User } from '@/types'
 import { ApiError, parseApiEnvelope } from '@/lib/api-client'
 import { BACKEND_ERROR_CODES, CLIENT_ERROR_CODES, isAuthFailureCode } from '@/shared/error-codes'
@@ -62,14 +63,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   if (!user) {
-    redirect('/login')
+    redirect('/')
   }
 
   return (
     <UserProvider user={user}>
-      <div className="min-h-screen bg-background">
+      <div className="app-shell">
+        <AppBackdrop />
         <NavBar email={user.email} />
-        <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
+        <main className="relative mx-auto w-full max-w-5xl px-4 pb-14 pt-8 sm:px-6">{children}</main>
       </div>
     </UserProvider>
   )

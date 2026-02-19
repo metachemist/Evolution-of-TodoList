@@ -10,11 +10,9 @@ import React from 'react'
 
 const mockPush = vi.fn()
 const mockRefresh = vi.fn()
-let mockSearchParams = new URLSearchParams()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
-  useSearchParams: () => mockSearchParams,
 }))
 
 function Wrapper({ children }: { children: React.ReactNode }) {
@@ -24,7 +22,6 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 
 describe('LoginForm', () => {
   it('renders email and password fields', () => {
-    mockSearchParams = new URLSearchParams()
     render(<LoginForm />, { wrapper: Wrapper })
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
@@ -32,7 +29,6 @@ describe('LoginForm', () => {
 
   it('disables submit button during loading', async () => {
     const user = userEvent.setup()
-    mockSearchParams = new URLSearchParams()
 
     server.use(
       http.post('http://localhost:8000/api/auth/login', async () => {
@@ -57,7 +53,6 @@ describe('LoginForm', () => {
 
   it('shows error message on 401', async () => {
     const user = userEvent.setup()
-    mockSearchParams = new URLSearchParams()
 
     server.use(
       http.post('http://localhost:8000/api/auth/login', () =>
@@ -77,11 +72,5 @@ describe('LoginForm', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/Invalid email or password/i)
     })
-  })
-
-  it('shows session expired banner when reason=session_expired', () => {
-    mockSearchParams = new URLSearchParams('reason=session_expired')
-    render(<LoginForm />, { wrapper: Wrapper })
-    expect(screen.getByRole('alert')).toHaveTextContent(/session has expired/i)
   })
 })
