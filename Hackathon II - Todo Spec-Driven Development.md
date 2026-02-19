@@ -36,7 +36,7 @@ You are required to complete the **5-Phase "Evolution of Todo" Project** using C
 * **Integrated AI Chatbot:** In Phases III, IV, and V, you must implement a conversational interface using **OpenAI Chatkit**, **OpenAI Agents SDK**, and **Official MCP SDK**. The bot must be able to manage the user's Todo list via natural language (e.g., "Reschedule my morning meetings to 2 PM").  
 * **Cloud Native Deployment:** In Phases IV and V, you must deploy the chatbot locally on Minikube, and on the cloud on DigitalOcean Kubernetes (DOKS). 
 
-# **Todo App Feature Progression**
+# **Focentra Feature Progression**
 
 ## **Basic Level (Core Essentials)**
 
@@ -367,7 +367,7 @@ Create multiple CLAUDE.md files to provide context at different levels:
 
 # **Root CLAUDE.md**
 
-\# Todo App \- Hackathon II  
+\# Focentra \- Hackathon II  
    
 \#\# Project Overview  
 This is a monorepo using GitHub Spec-Kit for spec-driven development.  
@@ -465,7 +465,7 @@ uvicorn main:app \--reload \--port 8000
 
 ## **/specs/overview.md**
 
-\# Todo App Overview  
+\# Focentra Overview  
    
 \#\# Purpose  
 A todo application that evolves from console app to AI chatbot.  
@@ -1055,7 +1055,7 @@ Changes from one client are broadcast to all connected clients in real-time.
 | remind\_at | datetime | When to send reminder |
 | user\_id | string | User to notify |
 
-# **Why Kafka for Todo App?**
+# **Why Kafka for Focentra?**
 
 | Without Kafka | With Kafka |
 | :---- | :---- |
@@ -1177,9 +1177,9 @@ producer.send("task-events", {"event\_type": "created", "task\_id": 1})
 
 **Dapr (Distributed Application Runtime)** is a portable, event-driven runtime that simplifies building microservices. It runs as a **sidecar** next to your application and provides building blocks via HTTP/gRPC APIs.
 
-# **Dapr Building Blocks for Todo App**
+# **Dapr Building Blocks for Focentra**
 
-| Building Block | Use Case in Todo App |
+| Building Block | Use Case in Focentra |
 | :---- | :---- |
 | **Pub/Sub** | Kafka abstraction – publish/subscribe without Kafka client code |
 | **State Management** | Conversation state storage (alternative to direct DB calls) |

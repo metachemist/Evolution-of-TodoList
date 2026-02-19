@@ -47,7 +47,11 @@ describe('useCreateTask', () => {
     await waitFor(() => expect(tasksResult.current.isSuccess).toBe(true))
 
     await act(async () => {
-      await createResult.current.mutateAsync({ title: 'New Task' })
+      await createResult.current.mutateAsync({
+        title: 'New Task',
+        priority: 'MEDIUM',
+        status: 'TODO',
+      })
     })
 
     await waitFor(() =>
@@ -64,12 +68,16 @@ describe('useToggleTask', () => {
         title: 'Test Task 1',
         description: null,
         is_completed: false,
+        priority: 'MEDIUM',
+        due_date: null,
+        focus_minutes: 0,
+        status: 'TODO',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         owner_id: 'user-123',
       },
     ]
-    const tasksAfter = [{ ...tasksBefore[0], is_completed: true }]
+    const tasksAfter = [{ ...tasksBefore[0], is_completed: true, status: 'DONE' as const }]
 
     // Set handlers before rendering
     server.use(

@@ -1,4 +1,4 @@
-# Feature Specification: Multi-User Todo API Backend
+# Feature Specification: Multi-User Focentra API Backend
 
 **Feature Branch**: `1-fastapi-todo-backend`
 **Created**: 2026-02-11

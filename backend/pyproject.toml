@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "fastapi-todo-backend"
 version = "0.1.0"
-description = "Multi-User Todo REST API with FastAPI, SQLModel, and Neon PostgreSQL"
+description = "Focentra REST API with FastAPI, SQLModel, and Neon PostgreSQL"
 authors = ["metachemist <meta.chemist.22@gmail.com>"]
 package-mode = false
 

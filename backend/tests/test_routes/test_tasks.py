@@ -1,10 +1,12 @@
 import pytest
+from datetime import timedelta
 from uuid import uuid4
 
 from src.models.user import User
-from src.models.task import Task
+from src.models.task import Task, TaskStatus
 from src.services.auth_service import hash_password as get_password_hash
 from tests.conftest import make_auth_header
+from src.utils.datetime_utils import utcnow_naive
 
 
 @pytest.mark.asyncio
@@ -46,6 +48,9 @@ async def test_create_task_returns_201(client, db_session):
     assert data["title"] == "New Task"
     assert data["description"] == "Details"
     assert data["is_completed"] is False
+    assert data["priority"] == "MEDIUM"
+    assert data["status"] == "TODO"
+    assert data["focus_minutes"] == 0
     assert data["owner_id"] == str(user.id)
 
 
@@ -136,6 +141,7 @@ async def test_toggle_completion(client, db_session):
     assert body["success"] is True
     assert body["error"] is None
     assert body["data"]["is_completed"] is True
+    assert body["data"]["status"] == "DONE"
 
 
 @pytest.mark.asyncio
@@ -216,6 +222,116 @@ async def test_create_task_whitespace_title_returns_422_envelope(client, db_sess
     resp = await client.post(
         f"/api/{user.id}/tasks",
         json={"title": "   ", "description": "valid"},
+        headers=headers,
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["success"] is False
+    assert body["data"] is None
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+
+
+@pytest.mark.asyncio
+async def test_get_tasks_overview_returns_200(client, db_session):
+    """GET /api/tasks/overview returns aggregate progress metrics for current user."""
+    user = User(email="overview@test.com", hashed_password=get_password_hash("pw"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    now = utcnow_naive()
+    task_done = Task(title="Done", owner_id=user.id, status=TaskStatus.DONE, is_completed=True, focus_minutes=30)
+    task_in_progress = Task(title="Progress", owner_id=user.id, status=TaskStatus.IN_PROGRESS, focus_minutes=20)
+    task_overdue = Task(
+        title="Overdue",
+        owner_id=user.id,
+        status=TaskStatus.TODO,
+        due_date=now - timedelta(days=1),
+    )
+    db_session.add_all([task_done, task_in_progress, task_overdue])
+    await db_session.commit()
+
+    headers = make_auth_header(str(user.id))
+    resp = await client.get("/api/tasks/overview", headers=headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    assert body["data"]["total_tasks"] == 3
+    assert body["data"]["completed_tasks"] == 1
+    assert body["data"]["in_progress_tasks"] == 1
+    assert body["data"]["overdue_tasks"] == 1
+    assert body["data"]["total_focus_minutes"] == 50
+
+
+@pytest.mark.asyncio
+async def test_post_focus_adds_minutes(client, db_session):
+    """POST /api/tasks/{task_id}/focus increments focus_minutes and returns updated task."""
+    user = User(email="focus@test.com", hashed_password=get_password_hash("pw"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(title="Focus task", owner_id=user.id, focus_minutes=5, status=TaskStatus.TODO)
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    headers = make_auth_header(str(user.id))
+    resp = await client.post(
+        f"/api/tasks/{task.id}/focus",
+        json={"minutes": 25},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    assert body["data"]["focus_minutes"] == 30
+    assert body["data"]["status"] == "IN_PROGRESS"
+
+
+@pytest.mark.asyncio
+async def test_post_focus_rejects_invalid_minutes(client, db_session):
+    """POST /api/tasks/{task_id}/focus validates minutes bounds with VALIDATION_ERROR envelope."""
+    user = User(email="focus-invalid@test.com", hashed_password=get_password_hash("pw"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    task = Task(title="Focus invalid", owner_id=user.id)
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+
+    headers = make_auth_header(str(user.id))
+    resp = await client.post(
+        f"/api/tasks/{task.id}/focus",
+        json={"minutes": 0},
+        headers=headers,
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["success"] is False
+    assert body["data"] is None
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+
+
+@pytest.mark.asyncio
+async def test_create_task_rejects_past_due_date(client, db_session):
+    """POST /api/{user_id}/tasks rejects past due_date with VALIDATION_ERROR envelope."""
+    user = User(email="pastdue@test.com", hashed_password=get_password_hash("pw"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    headers = make_auth_header(str(user.id))
+    resp = await client.post(
+        f"/api/{user.id}/tasks",
+        json={
+            "title": "Past due",
+            "due_date": (utcnow_naive() - timedelta(hours=1)).isoformat(),
+        },
         headers=headers,
     )
     assert resp.status_code == 422

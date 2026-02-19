@@ -27,6 +27,11 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
     formState: { errors, isSubmitting },
   } = useForm<TaskCreateFormData>({
     resolver: zodResolver(taskCreateSchema),
+    defaultValues: {
+      priority: 'MEDIUM',
+      status: 'TODO',
+      due_date: '',
+    },
   })
 
   async function onSubmit(data: TaskCreateFormData) {
@@ -35,6 +40,9 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
       await createTask.mutateAsync({
         title: data.title,
         description: data.description || undefined,
+        priority: data.priority,
+        status: data.status,
+        due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
       })
       reset()
       onOpenChange(false)
@@ -68,6 +76,48 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
           error={errors.title?.message}
           autoFocus
         />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="priority" className="text-sm font-medium text-foreground">
+              Priority
+            </label>
+            <select id="priority" {...register('priority')} className="input-premium">
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+            </select>
+            {errors.priority && (
+              <p className="text-sm text-destructive" role="alert">{errors.priority.message}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="status" className="text-sm font-medium text-foreground">
+              Status
+            </label>
+            <select id="status" {...register('status')} className="input-premium">
+              <option value="TODO">TODO</option>
+              <option value="IN_PROGRESS">IN PROGRESS</option>
+              <option value="DONE">DONE</option>
+            </select>
+            {errors.status && (
+              <p className="text-sm text-destructive" role="alert">{errors.status.message}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="due_date" className="text-sm font-medium text-foreground">
+            Due Date <span className="text-muted-foreground">(optional)</span>
+          </label>
+          <input
+            id="due_date"
+            type="datetime-local"
+            {...register('due_date')}
+            className="input-premium"
+          />
+          {errors.due_date && (
+            <p className="text-sm text-destructive" role="alert">{errors.due_date.message}</p>
+          )}
+        </div>
         <div className="flex flex-col gap-1">
           <label htmlFor="description" className="text-sm font-medium text-foreground">
             Description <span className="text-muted-foreground">(optional)</span>

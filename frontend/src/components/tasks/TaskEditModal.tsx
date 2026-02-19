@@ -19,6 +19,18 @@ interface TaskEditModalProps {
   onOpenChange: (open: boolean) => void
 }
 
+function toDateTimeLocal(value: string | null): string {
+  if (!value) {
+    return ''
+  }
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return ''
+  }
+  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
 export function TaskEditModal({ task, open, onOpenChange }: TaskEditModalProps) {
   const updateTask = useUpdateTask()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -34,12 +46,21 @@ export function TaskEditModal({ task, open, onOpenChange }: TaskEditModalProps) 
     defaultValues: {
       title: task.title,
       description: task.description ?? '',
+      priority: task.priority,
+      status: task.status,
+      due_date: toDateTimeLocal(task.due_date),
     },
   })
 
   // Reset form values when task changes
   useEffect(() => {
-    reset({ title: task.title, description: task.description ?? '' })
+    reset({
+      title: task.title,
+      description: task.description ?? '',
+      priority: task.priority,
+      status: task.status,
+      due_date: toDateTimeLocal(task.due_date),
+    })
   }, [task, reset])
 
   async function onSubmit(data: TaskUpdateFormData) {
@@ -50,6 +71,9 @@ export function TaskEditModal({ task, open, onOpenChange }: TaskEditModalProps) 
         data: {
           title: data.title,
           description: data.description ? data.description : undefined,
+          priority: data.priority,
+          status: data.status,
+          due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
         },
       })
       onOpenChange(false)
@@ -90,6 +114,56 @@ export function TaskEditModal({ task, open, onOpenChange }: TaskEditModalProps) 
           error={errors.title?.message}
           autoFocus
         />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`edit-priority-${task.id}`} className="text-sm font-medium text-foreground">
+              Priority
+            </label>
+            <select
+              id={`edit-priority-${task.id}`}
+              {...register('priority')}
+              className="input-premium"
+            >
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+            </select>
+            {errors.priority && (
+              <p className="text-sm text-destructive" role="alert">{errors.priority.message}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`edit-status-${task.id}`} className="text-sm font-medium text-foreground">
+              Status
+            </label>
+            <select
+              id={`edit-status-${task.id}`}
+              {...register('status')}
+              className="input-premium"
+            >
+              <option value="TODO">TODO</option>
+              <option value="IN_PROGRESS">IN PROGRESS</option>
+              <option value="DONE">DONE</option>
+            </select>
+            {errors.status && (
+              <p className="text-sm text-destructive" role="alert">{errors.status.message}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`edit-due-date-${task.id}`} className="text-sm font-medium text-foreground">
+            Due Date <span className="text-muted-foreground">(optional)</span>
+          </label>
+          <input
+            id={`edit-due-date-${task.id}`}
+            type="datetime-local"
+            {...register('due_date')}
+            className="input-premium"
+          />
+          {errors.due_date && (
+            <p className="text-sm text-destructive" role="alert">{errors.due_date.message}</p>
+          )}
+        </div>
         <div className="flex flex-col gap-1">
           <label htmlFor={`edit-description-${task.id}`} className="text-sm font-medium text-foreground">
             Description <span className="text-muted-foreground">(optional)</span>

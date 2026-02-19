@@ -9,7 +9,7 @@ let currentTheme = 'light'
 
 vi.mock('next-themes', () => ({
   useTheme: () => ({
-    theme: currentTheme,
+    resolvedTheme: currentTheme,
     setTheme,
   }),
 }))

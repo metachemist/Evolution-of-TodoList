@@ -28,8 +28,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 # Create FastAPI app
 app = FastAPI(
-    title="Todo API",
-    description="Multi-User Todo REST API with FastAPI, SQLModel, and PostgreSQL",
+    title="Focentra API",
+    description="Focentra API for task management focused on deep work.",
     version="0.2.0",
     lifespan=lifespan,
 )
@@ -188,7 +188,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 async def root() -> dict:
     return {
         "success": True,
-        "data": {"message": "Welcome to the Todo API"},
+        "data": {"message": "Welcome to the Focentra API"},
         "error": None,
     }
 
@@ -208,8 +208,10 @@ async def health_check() -> dict:
 
 def _include_routers() -> None:
     from src.routes.tasks import router as tasks_router
+    from src.routes.tasks import task_tools_router
     from src.routes.auth import router as auth_router
 
+    app.include_router(task_tools_router, prefix="/api/tasks", tags=["tasks"])
     app.include_router(tasks_router, prefix="/api/{user_id}", tags=["tasks"])
     app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 

@@ -1,4 +1,4 @@
-# ADR-0004: Full-Stack Technology Stack for Phase 2 Todo Application
+# ADR-0004: Full-Stack Technology Stack for Phase 2 Focentra Application
 
 ## Status
 Proposed

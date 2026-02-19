@@ -14,13 +14,20 @@ from src.database import get_db_session
 from src.models.user import User
 from src.middleware.auth import require_authenticated_user
 from src.services.task_service import (
-    get_tasks, create_task, get_task_by_id, update_task,
-    delete_task, toggle_completion,
+    get_tasks,
+    create_task,
+    get_task_by_id,
+    update_task,
+    delete_task,
+    toggle_completion,
+    get_tasks_overview,
+    add_focus_minutes,
 )
 from src.utils.error_mapper import ForbiddenError
-from src.schemas.task import TaskCreate, TaskUpdate
+from src.schemas.task import FocusSessionRequest, TaskCreate, TaskUpdate
 
 router = APIRouter(tags=["tasks"])
+task_tools_router = APIRouter(tags=["tasks"])
 
 
 def _enforce_user_id_match(user_id: str, current_user: User) -> None:
@@ -59,7 +66,15 @@ async def create_user_task(
 ) -> JSONResponse:
     """Create a task owned by the authenticated user (FR-005)."""
     _enforce_user_id_match(user_id, current_user)
-    task = await create_task(db, str(current_user.id), task_data.title, task_data.description)
+    task = await create_task(
+        db,
+        str(current_user.id),
+        task_data.title,
+        task_data.description,
+        task_data.priority,
+        task_data.due_date,
+        task_data.status,
+    )
     return JSONResponse(
         status_code=201,
         content=jsonable_encoder({"success": True, "data": task, "error": None}),
@@ -106,6 +121,9 @@ async def update_user_task(
         str(task_id),
         task_data.title,
         task_data.description,
+        task_data.priority,
+        task_data.due_date,
+        task_data.status,
     )
     if not updated:
         from src.utils.error_mapper import TaskNotFoundError
@@ -141,6 +159,42 @@ async def toggle_task_completion(
     """Toggle completion status of a task owned by the authenticated user."""
     _enforce_user_id_match(user_id, current_user)
     updated = await toggle_completion(db, str(current_user.id), str(task_id))
+    if not updated:
+        from src.utils.error_mapper import TaskNotFoundError
+        raise TaskNotFoundError()
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({"success": True, "data": updated, "error": None}),
+    )
+
+
+@task_tools_router.get("/overview")
+async def get_authenticated_user_tasks_overview(
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Get progress overview metrics for the authenticated user's tasks."""
+    overview = await get_tasks_overview(db, str(current_user.id))
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({"success": True, "data": overview, "error": None}),
+    )
+
+
+@task_tools_router.post("/{task_id}/focus")
+async def add_task_focus_minutes(
+    task_id: UUID,
+    focus_data: FocusSessionRequest,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Add focused minutes to a task owned by the authenticated user."""
+    updated = await add_focus_minutes(
+        db,
+        str(current_user.id),
+        str(task_id),
+        focus_data.minutes,
+    )
     if not updated:
         from src.utils.error_mapper import TaskNotFoundError
         raise TaskNotFoundError()

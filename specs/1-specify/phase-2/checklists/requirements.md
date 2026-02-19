@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Multi-User Todo API Backend
+# Specification Quality Checklist: Multi-User Focentra API Backend
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-02-11

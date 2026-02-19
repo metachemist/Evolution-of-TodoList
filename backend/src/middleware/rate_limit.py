@@ -87,14 +87,25 @@ class RedisAdapter:
     """
     def __init__(self, redis_url: str) -> None:
         import redis.asyncio as aioredis
-        self._client = aioredis.from_url(redis_url, decode_responses=True)
+        connect_timeout = float(os.getenv("RATE_LIMIT_REDIS_CONNECT_TIMEOUT_SECONDS", "0.2"))
+        socket_timeout = float(os.getenv("RATE_LIMIT_REDIS_SOCKET_TIMEOUT_SECONDS", "0.2"))
+        self._client = aioredis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=connect_timeout,
+            socket_timeout=socket_timeout,
+        )
 
     async def increment(self, key: str, limit: int, window_seconds: int) -> bool:
-        count = await self._client.incr(key)
-        if count == 1:
-            # First request in this window — set expiry
-            await self._client.expire(key, window_seconds)
-        return count <= limit
+        try:
+            count = await self._client.incr(key)
+            if count == 1:
+                # First request in this window — set expiry
+                await self._client.expire(key, window_seconds)
+            return count <= limit
+        except Exception:
+            # Let middleware policy decide fail-open or fail-closed.
+            raise
 
 
 # ---------------------------------------------------------------------------

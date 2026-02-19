@@ -17,6 +17,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Timestamp policy:
+    # Store created_at/updated_at as TIMESTAMP WITHOUT TIME ZONE.
+    # Application code normalizes all DB-bound timestamps to naive UTC.
     # Create user table
     op.create_table('user',
         sa.Column('id', sa.Uuid(), nullable=False),

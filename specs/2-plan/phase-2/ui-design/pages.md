@@ -67,7 +67,7 @@ ELSE:
 │           (centered card)            │
 │                                      │
 │  ┌────────────────────────────────┐  │
-│  │         Todo App Logo          │  │
+│  │         Focentra Logo          │  │
 │  │                                │  │
 │  │  [Session expired message]     │  │ ← Only if ?reason=session_expired
 │  │                                │  │
@@ -104,7 +104,7 @@ ELSE:
 │           (centered card)            │
 │                                      │
 │  ┌────────────────────────────────┐  │
-│  │         Todo App Logo          │  │
+│  │         Focentra Logo          │  │
 │  │                                │  │
 │  │  Email:    [________________]  │  │
 │  │  Password: [________________]  │  │

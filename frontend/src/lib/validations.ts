@@ -20,6 +20,16 @@ export const taskCreateSchema = z.object({
     .max(5000, 'Description must be 5000 characters or less.')
     .optional()
     .or(z.literal('')),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+  status: z.enum(['TODO', 'IN_PROGRESS', 'DONE']),
+  due_date: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (value) => !value || !Number.isNaN(Date.parse(value)),
+      'Please select a valid due date.',
+    ),
 })
 
 // Task Update (same constraints)

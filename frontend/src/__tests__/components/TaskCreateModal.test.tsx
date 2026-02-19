@@ -30,7 +30,13 @@ describe('TaskCreateModal', () => {
 
     server.use(
       http.post('http://localhost:8000/api/:userId/tasks', async ({ request }) => {
-        const body = (await request.json()) as { title: string; description?: string }
+        const body = (await request.json()) as {
+          title: string
+          description?: string
+          priority: 'LOW' | 'MEDIUM' | 'HIGH'
+          due_date?: string
+          status: 'TODO' | 'IN_PROGRESS' | 'DONE'
+        }
         return HttpResponse.json(
           {
             success: true,
@@ -38,7 +44,11 @@ describe('TaskCreateModal', () => {
               id: 'task-new',
               title: body.title,
               description: body.description ?? null,
-              is_completed: false,
+              is_completed: body.status === 'DONE',
+              priority: body.priority,
+              due_date: body.due_date ?? null,
+              focus_minutes: 0,
+              status: body.status,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
               owner_id: 'user-123',
@@ -94,7 +104,7 @@ describe('NewTaskButton', () => {
     const user = userEvent.setup()
     render(<NewTaskButton />, { wrapper: Wrapper })
 
-    await user.click(screen.getByRole('button', { name: /\+ create task/i }))
+    await user.click(screen.getByRole('button', { name: /create task/i }))
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
