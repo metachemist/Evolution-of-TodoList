@@ -8,6 +8,8 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../mocks/server'
 
 const testUser = { id: 'user-123', email: 'test@example.com' }
+const ok = <T,>(data: T, status = 200) =>
+  HttpResponse.json({ success: true, data, error: null }, { status })
 
 function TestWrapper({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({
@@ -28,7 +30,7 @@ describe('TaskList', () => {
 
   it('renders EmptyState when no tasks', async () => {
     server.use(
-      http.get('http://localhost:8000/api/:userId/tasks', () => HttpResponse.json([])),
+      http.get('http://localhost:8000/api/:userId/tasks', () => ok([])),
     )
 
     render(<TaskList />, { wrapper: TestWrapper })
@@ -49,7 +51,10 @@ describe('TaskList', () => {
   it('shows error state with retry button on fetch failure', async () => {
     server.use(
       http.get('http://localhost:8000/api/:userId/tasks', () =>
-        HttpResponse.json({ error: { code: 'INTERNAL_SERVER_ERROR' } }, { status: 500 }),
+        HttpResponse.json(
+          { success: false, data: null, error: { code: 'INTERNAL_SERVER_ERROR', message: 'boom' } },
+          { status: 500 },
+        ),
       ),
     )
 

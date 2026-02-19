@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
@@ -6,14 +6,18 @@ from uuid import UUID
 
 class TaskCreate(BaseModel):
     """Schema for creating new tasks."""
-    title: str
-    description: Optional[str] = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    title: str = Field(min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None, min_length=1, max_length=5000)
 
 
 class TaskUpdate(BaseModel):
     """Schema for updating existing tasks."""
-    title: Optional[str] = None
-    description: Optional[str] = None
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    title: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None, min_length=1, max_length=5000)
 
 
 class TaskResponse(BaseModel):

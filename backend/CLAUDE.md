@@ -60,4 +60,65 @@ backend/
 - Return 401 for missing/invalid tokens
 - Return 403 for authorization failures
 - Sanitize all user inputs to prevent injection attacks
-- Use bcrypt for password hashing
+
+## Feature 007: Auth & DB Patterns (Task: T038)
+
+### Password Hashing — Argon2id
+- Library: `argon2-cffi` via `from argon2 import PasswordHasher`
+- Fixed params: `time_cost=3, memory_cost=65536, parallelism=2`
+- **Never lower these params without a new ADR** (see ADR-0011)
+- Hash func: `src/services/auth_service.py::hash_password()`
+
+### JWT Format — HS256
+- Library: `python-jose` (`from jose import jwt`)
+- Token: `{"sub": str(user.id), "email": user.email, "exp": now + 86400s}`
+- 24-hour absolute expiry — no refresh token flow
+- Token helpers: `src/utils/token.py::create_token()`, `decode_token()`
+- `decode_token` raises `SessionExpiredError` (401) or `InvalidTokenError` (401) — never returns None
+
+### Cookie Settings
+- `httponly=True, secure=COOKIE_SECURE env var, samesite="lax", max_age=86400, path="/"`
+- `COOKIE_SECURE=false` in dev (localhost); `true` in production
+- Cookie helper: `src/routes/auth.py::_set_auth_cookie()`, `_clear_auth_cookie()`
+
+### Auth Dependency
+- `require_authenticated_user` in `src/middleware/auth.py` — use as FastAPI Depends()
+- Reads Bearer header first, then access_token cookie
+- Returns full `User` ORM object; raises `AppException` subclass (never `HTTPException`)
+
+### Two-Layer Authorization (SEC-003 + SEC-004)
+- Call `_enforce_user_id_match(user_id, current_user)` at top of task route handlers
+- **Layer 1**: if `str(user_id) != str(current_user.id)` → raise `ForbiddenError()` (no DB query)
+- **Layer 2**: if task not found for user → raise `TaskNotFoundError()` (via service returning None)
+- Do NOT raise 403 at service layer — only in route handlers before DB queries
+
+### Error Mapper Rule
+- **Never** construct ad-hoc error strings in route handlers
+- Always raise an `AppException` subclass from `src/utils/error_mapper.py`
+- All 12 error types are defined there with exact catalog messages
+- Global handler in `main.py::app_exception_handler()` converts to wrapped JSON
+
+### Rate Limiting
+- Middleware: `src/middleware/rate_limit.py::RateLimitMiddleware`
+- **F02**: Middleware runs before Depends(); read JWT directly from header/cookie in middleware
+- Authenticated: 1000 req/hr by `rate:user:{user_id}:{epoch_hour}`
+- Unauthenticated: 100 req/hr by `rate:ip:{ip}:{epoch_hour}`
+- Redis-backed in production; InMemoryAdapter fallback when REDIS_URL absent
+
+### Task Traceability
+- Every new file must include: `# Task: T0XX — <one-line description>`
+- ORM only: never write raw SQL (constitution requirement)
+
+### Migration Run Order
+- 001_initial_models → 002_add_performance_indexes → 003_delete_orphan_tasks → 004_owner_id_not_null → 005_owner_fk_cascade
+- Run via: `alembic upgrade head` (Docker CMD does this automatically)
+
+## Test Commands (Reliable Imports)
+
+- Run from backend directory: `cd backend`
+- Either command is supported:
+  - `poetry run pytest`
+  - `python -m pytest` (when backend env is activated, e.g. `poetry shell`)
+- Import reliability is enforced by:
+  - `pythonpath = ["."]` in `backend/pyproject.toml`
+  - path bootstrap in `backend/tests/conftest.py`

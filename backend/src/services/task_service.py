@@ -1,3 +1,4 @@
+# Task: T023 — TaskService user-scoped queries and mutations
 from datetime import datetime
 
 from sqlmodel import select
@@ -5,6 +6,16 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List
 from uuid import UUID
 from ..models.task import Task
+
+
+def _utcnow_naive() -> datetime:
+    """
+    Return UTC time as a timezone-naive datetime.
+
+    The current schema uses TIMESTAMP WITHOUT TIME ZONE, so sending aware
+    datetimes (tzinfo=UTC) to asyncpg raises a bind error.
+    """
+    return datetime.utcnow()
 
 
 async def create_task(db: AsyncSession, user_id: str, title: str, description: str | None) -> Task:
@@ -76,7 +87,7 @@ async def update_task(
         task.title = title
     if description is not None:
         task.description = description
-    task.updated_at = datetime.utcnow()
+    task.updated_at = _utcnow_naive()
 
     await db.commit()
     await db.refresh(task)
@@ -119,7 +130,7 @@ async def toggle_completion(db: AsyncSession, user_id: str, task_id: str) -> Tas
         return None
     
     task.is_completed = not task.is_completed
-    task.updated_at = datetime.utcnow()
+    task.updated_at = _utcnow_naive()
     
     await db.commit()
     await db.refresh(task)

@@ -37,7 +37,11 @@ describe('LoginForm', () => {
     server.use(
       http.post('http://localhost:8000/api/auth/login', async () => {
         await new Promise((r) => setTimeout(r, 300))
-        return HttpResponse.json({ access_token: 'tok', token_type: 'bearer' })
+        return HttpResponse.json({
+          success: true,
+          data: { access_token: 'tok', token_type: 'bearer' },
+          error: null,
+        })
       }),
     )
 

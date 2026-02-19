@@ -10,6 +10,8 @@ import type { Task } from '@/types'
 import React from 'react'
 
 const testUser = { id: 'user-123', email: 'test@example.com' }
+const ok = <T,>(data: T, status = 200) =>
+  HttpResponse.json({ success: true, data, error: null }, { status })
 
 let queryClient: QueryClient
 
@@ -23,7 +25,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(
     QueryClientProvider,
     { client: queryClient },
-    React.createElement(UserProvider, { user: testUser, children }, children),
+    React.createElement(UserProvider, { user: testUser }, children),
   )
 }
 
@@ -71,9 +73,9 @@ describe('useToggleTask', () => {
 
     // Set handlers before rendering
     server.use(
-      http.get('http://localhost:8000/api/:userId/tasks', () => HttpResponse.json(tasksBefore)),
+      http.get('http://localhost:8000/api/:userId/tasks', () => ok(tasksBefore)),
       http.patch('http://localhost:8000/api/:userId/tasks/:taskId/complete', () =>
-        HttpResponse.json(tasksAfter[0]),
+        ok(tasksAfter[0]),
       ),
     )
 
@@ -88,7 +90,7 @@ describe('useToggleTask', () => {
 
     // Override get handler to return the toggled version for the invalidation refetch
     server.use(
-      http.get('http://localhost:8000/api/:userId/tasks', () => HttpResponse.json(tasksAfter)),
+      http.get('http://localhost:8000/api/:userId/tasks', () => ok(tasksAfter)),
     )
 
     await act(async () => {
@@ -116,7 +118,7 @@ describe('useDeleteTask', () => {
         new HttpResponse(null, { status: 204 }),
       ),
       // Return empty list after deletion
-      http.get('http://localhost:8000/api/:userId/tasks', () => HttpResponse.json([])),
+      http.get('http://localhost:8000/api/:userId/tasks', () => ok([])),
     )
 
     await act(async () => {

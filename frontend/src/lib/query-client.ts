@@ -2,19 +2,20 @@
 import { QueryCache, QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ApiError } from './api-client'
+import { BACKEND_ERROR_CODES, BACKEND_ERROR_MESSAGES } from '@/shared/error-codes'
 
 function createQueryClient() {
   return new QueryClient({
     queryCache: new QueryCache({
       onError: (error) => {
         if (error instanceof ApiError) {
-          if (error.status === 401 || error.code === 'SESSION_EXPIRED') {
+          if (error.status === 401 || error.code === BACKEND_ERROR_CODES.SESSION_EXPIRED) {
             // Session expired — redirect to login with reason
             if (typeof window !== 'undefined') {
               window.location.href = '/login?reason=session_expired'
             }
           } else if (error.status === 403) {
-            toast.error("You don't have permission to perform this action.", { duration: 5000 })
+            toast.error(BACKEND_ERROR_MESSAGES.FORBIDDEN, { duration: 5000 })
             if (typeof window !== 'undefined') {
               window.location.href = '/dashboard'
             }

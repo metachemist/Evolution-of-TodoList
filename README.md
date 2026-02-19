@@ -66,6 +66,23 @@ This project follows the SDD Loop:
 Specify (WHAT) → Plan (HOW) → Tasks (BREAKDOWN) → Implement (CODE)
 ```
 
+## Backend Tests
+
+Run backend tests from the `backend/` directory after installing dependencies:
+
+```bash
+cd backend
+poetry install --with dev
+```
+
+Either invocation style is supported (same environment):
+
+```bash
+poetry run pytest
+# or (inside an activated backend virtualenv / poetry shell)
+python -m pytest
+```
+
 ## Contributing
 
 Please follow the constitutional principles outlined in `constitution.md` when contributing to this project.

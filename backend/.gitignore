@@ -162,8 +162,8 @@ uvicorn_error.log
 access.log
 uvicorn.log
 
-# Alembic
-alembic/
+# Local E2E orchestration artifacts
+.tmp/
 
 # Logs
 *.log

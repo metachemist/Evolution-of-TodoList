@@ -24,4 +24,9 @@ class Task(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Foreign key to User
-    owner_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
+    owner_id: UUID = Field(
+        foreign_key="user.id",
+        ondelete="CASCADE",
+        nullable=False,
+        index=True,
+    )

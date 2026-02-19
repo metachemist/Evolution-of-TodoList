@@ -5,7 +5,8 @@
 ## Prerequisites
 
 - Node.js 22+ (LTS)
-- The FastAPI backend running at `http://localhost:8000` (see `backend/` directory)
+- Frontend dependencies installed (`cd frontend && npm ci`)
+- Backend dependencies installed (`cd backend && poetry install --with dev`)
 - A Neon PostgreSQL database configured for the backend
 
 ## 1. Project Setup
@@ -171,12 +172,18 @@ npm run test
 # Unit tests with coverage
 npm run test:coverage
 
-# E2E tests (requires both backend and frontend running)
-npx playwright test
+# E2E tests (self-contained: Playwright boots backend + frontend)
+npm run test:e2e
 
 # E2E tests with UI
 npx playwright test --ui
 ```
+
+Playwright orchestration details:
+- Starts backend at `http://127.0.0.1:38000` via `frontend/playwright.config.ts`.
+- Resets isolated test DB `backend/.tmp/playwright-e2e.db` before each run.
+- Starts frontend dev server at `http://localhost:3000`.
+- Seeds deterministic E2E user in `frontend/e2e/global-setup.ts`.
 
 ## 7. Development Workflow
 

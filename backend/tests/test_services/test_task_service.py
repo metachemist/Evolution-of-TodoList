@@ -1,3 +1,4 @@
+# Task: T064 — align task service tests with AuthService hashing contract
 import pytest
 from uuid import uuid4
 
@@ -8,7 +9,7 @@ from src.services.task_service import (
     update_task, delete_task, toggle_completion,
 )
 from src.services.user_service import get_user_by_id
-from src.utils.auth import get_password_hash
+from src.services.auth_service import hash_password as get_password_hash
 
 
 @pytest.mark.asyncio
@@ -87,10 +88,13 @@ async def test_update_task(db_session):
     await db_session.refresh(user)
 
     task = await create_task(db_session, str(user.id), "Old", "Old desc")
+    original_updated_at = task.updated_at
     updated = await update_task(db_session, str(user.id), str(task.id), "New", None)
     assert updated is not None
     assert updated.title == "New"
     assert updated.description == "Old desc"  # unchanged since we passed None
+    assert updated.updated_at.tzinfo is None
+    assert updated.updated_at >= original_updated_at
 
 
 @pytest.mark.asyncio
@@ -119,9 +123,11 @@ async def test_toggle_completion(db_session):
 
     toggled = await toggle_completion(db_session, str(user.id), str(task.id))
     assert toggled.is_completed is True
+    assert toggled.updated_at.tzinfo is None
 
     toggled_back = await toggle_completion(db_session, str(user.id), str(task.id))
     assert toggled_back.is_completed is False
+    assert toggled_back.updated_at.tzinfo is None
 
 
 @pytest.mark.asyncio

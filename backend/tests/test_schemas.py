@@ -1,6 +1,6 @@
 import pytest
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.schemas import (
     TaskCreate, TaskUpdate, TaskResponse,
@@ -28,7 +28,7 @@ def test_task_update_schema():
 
 def test_task_response_schema():
     uid = uuid4()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     resp = TaskResponse(
         id=uid, title="T", description=None,
         is_completed=False, created_at=now, updated_at=now, owner_id=uid,
@@ -49,7 +49,7 @@ def test_error_response_schema():
 
 def test_user_response_schema():
     uid = uuid4()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     resp = UserResponse(id=uid, email="a@b.com", created_at=now, updated_at=now)
     assert resp.email == "a@b.com"
     assert resp.id == uid

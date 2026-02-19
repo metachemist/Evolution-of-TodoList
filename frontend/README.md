@@ -18,6 +18,28 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## E2E Environment (Playwright)
+
+Run E2E tests from `frontend/`:
+
+```bash
+npm run test:e2e
+```
+
+Prerequisites:
+
+- Backend dependencies are installed (`cd backend && poetry install`).
+- Frontend dependencies are installed (`cd frontend && npm ci`).
+
+Playwright now orchestrates the full stack automatically:
+
+- Starts backend (`uvicorn`) on `http://127.0.0.1:38000` via `frontend/playwright.config.ts`.
+- Resets an isolated SQLite DB at `backend/.tmp/playwright-e2e.db` before each E2E run.
+- Starts frontend (`next dev`) on `http://localhost:3000` with `NEXT_PUBLIC_API_URL` pointed at the Playwright backend.
+- Seeds the deterministic E2E user (`e2e@example.com`) in `frontend/e2e/global-setup.ts`.
+
+No manually started backend is required for E2E execution.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

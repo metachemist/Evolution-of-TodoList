@@ -7,12 +7,22 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { apiClient } from '@/lib/api-client'
+import { apiClient, ApiError } from '@/lib/api-client'
 import { useUser } from '@/providers/UserProvider'
+import { CLIENT_ERROR_CODES } from '@/shared/error-codes'
 import type { Task, TaskCreateRequest, TaskUpdateRequest } from '@/types'
 
 function useTasksQueryKey(userId: string) {
   return ['tasks', userId] as const
+}
+
+async function fetchTasks(userId: string): Promise<Task[]> {
+  // Strict API client contract checks envelope shape; hook validates expected payload shape.
+  const data = await apiClient.get<unknown>(`/api/${userId}/tasks`)
+  if (!Array.isArray(data)) {
+    throw new ApiError(CLIENT_ERROR_CODES.API_CONTRACT_ERROR, 'Task list response must be an array.')
+  }
+  return data as Task[]
 }
 
 // T026: Fetch all tasks for authenticated user
@@ -20,7 +30,7 @@ export function useTasks() {
   const user = useUser()
   return useQuery({
     queryKey: useTasksQueryKey(user.id),
-    queryFn: () => apiClient.get<Task[]>(`/api/${user.id}/tasks`),
+    queryFn: () => fetchTasks(user.id),
     staleTime: 0,
   })
 }

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { useUpdateTask } from '@/hooks/use-tasks'
 import { taskUpdateSchema, type TaskUpdateFormData } from '@/lib/validations'
 import { ApiError } from '@/lib/api-client'
+import { BACKEND_ERROR_CODES } from '@/shared/error-codes'
 import type { Task } from '@/types'
 
 interface TaskEditModalProps {
@@ -44,10 +45,16 @@ export function TaskEditModal({ task, open, onOpenChange }: TaskEditModalProps) 
   async function onSubmit(data: TaskUpdateFormData) {
     setServerError(null)
     try {
-      await updateTask.mutateAsync({ taskId: task.id, data })
+      await updateTask.mutateAsync({
+        taskId: task.id,
+        data: {
+          title: data.title,
+          description: data.description ? data.description : undefined,
+        },
+      })
       onOpenChange(false)
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'TASK_NOT_FOUND') {
+      if (err instanceof ApiError && err.code === BACKEND_ERROR_CODES.TASK_NOT_FOUND) {
         setNotFound(true)
       } else if (err instanceof ApiError) {
         setServerError(err.message)

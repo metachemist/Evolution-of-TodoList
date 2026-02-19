@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from src.models.user import User
 from src.models.task import Task
-from src.utils.auth import get_password_hash
+from src.services.auth_service import hash_password as get_password_hash
 from tests.conftest import make_auth_header
 
 
@@ -18,7 +18,10 @@ async def test_get_tasks_returns_200(client, db_session):
     headers = make_auth_header(str(user.id))
     resp = await client.get(f"/api/{user.id}/tasks", headers=headers)
     assert resp.status_code == 200
-    assert resp.json() == []
+    body = resp.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    assert body["data"] == []
 
 
 @pytest.mark.asyncio
@@ -36,7 +39,10 @@ async def test_create_task_returns_201(client, db_session):
         headers=headers,
     )
     assert resp.status_code == 201
-    data = resp.json()
+    body = resp.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    data = body["data"]
     assert data["title"] == "New Task"
     assert data["description"] == "Details"
     assert data["is_completed"] is False
@@ -59,7 +65,10 @@ async def test_get_single_task(client, db_session):
     headers = make_auth_header(str(user.id))
     resp = await client.get(f"/api/{user.id}/tasks/{task.id}", headers=headers)
     assert resp.status_code == 200
-    assert resp.json()["title"] == "Find Me"
+    body = resp.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    assert body["data"]["title"] == "Find Me"
 
 
 @pytest.mark.asyncio
@@ -82,7 +91,10 @@ async def test_update_task(client, db_session):
         headers=headers,
     )
     assert resp.status_code == 200
-    assert resp.json()["title"] == "New Title"
+    body = resp.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    assert body["data"]["title"] == "New Title"
 
 
 @pytest.mark.asyncio
@@ -120,17 +132,27 @@ async def test_toggle_completion(client, db_session):
     headers = make_auth_header(str(user.id))
     resp = await client.patch(f"/api/{user.id}/tasks/{task.id}/complete", headers=headers)
     assert resp.status_code == 200
-    assert resp.json()["is_completed"] is True
+    body = resp.json()
+    assert body["success"] is True
+    assert body["error"] is None
+    assert body["data"]["is_completed"] is True
 
 
 @pytest.mark.asyncio
-async def test_error_response_format(client):
+async def test_error_response_format(client, db_session):
     """Error responses follow the {success, data, error} structure."""
-    fake_uid = str(uuid4())
-    resp = await client.get(f"/api/{fake_uid}/tasks", headers=make_auth_header(fake_uid))
+    # Create a real user so the auth guard passes
+    user = User(email="errfmt@test.com", hashed_password=get_password_hash("SecurePass1"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    # Request a non-existent task — should 404 with the wrapped error envelope
+    headers = make_auth_header(str(user.id), email="errfmt@test.com")
+    fake_task_id = str(uuid4())
+    resp = await client.get(f"/api/{user.id}/tasks/{fake_task_id}", headers=headers)
     assert resp.status_code == 404
     body = resp.json()
-    # Global exception handler wraps errors in {success, data, error} format
     assert body["success"] is False
     assert "error" in body
     assert "code" in body["error"]
@@ -154,12 +176,50 @@ async def test_pagination_defaults(client, db_session):
     # Default should return 20
     resp = await client.get(f"/api/{user.id}/tasks", headers=headers)
     assert resp.status_code == 200
-    assert len(resp.json()) == 20
+    assert len(resp.json()["data"]) == 20
 
     # Explicit limit=5
     resp = await client.get(f"/api/{user.id}/tasks?limit=5", headers=headers)
-    assert len(resp.json()) == 5
+    assert len(resp.json()["data"]) == 5
 
     # skip=20 should return remaining 5
     resp = await client.get(f"/api/{user.id}/tasks?skip=20", headers=headers)
-    assert len(resp.json()) == 5
+    assert len(resp.json()["data"]) == 5
+
+
+@pytest.mark.asyncio
+async def test_invalid_task_id_returns_422_envelope(client, db_session):
+    """Invalid UUID path params are rejected with 422 envelope response."""
+    user = User(email="invaliduuid@test.com", hashed_password=get_password_hash("pw"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    headers = make_auth_header(str(user.id))
+    resp = await client.get(f"/api/{user.id}/tasks/not-a-uuid", headers=headers)
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["success"] is False
+    assert body["data"] is None
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+
+
+@pytest.mark.asyncio
+async def test_create_task_whitespace_title_returns_422_envelope(client, db_session):
+    """Whitespace-only title is stripped then rejected by min_length validation."""
+    user = User(email="whitespace@test.com", hashed_password=get_password_hash("pw"))
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    headers = make_auth_header(str(user.id))
+    resp = await client.post(
+        f"/api/{user.id}/tasks",
+        json={"title": "   ", "description": "valid"},
+        headers=headers,
+    )
+    assert resp.status_code == 422
+    body = resp.json()
+    assert body["success"] is False
+    assert body["data"] is None
+    assert body["error"]["code"] == "VALIDATION_ERROR"

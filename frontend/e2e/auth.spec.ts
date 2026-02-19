@@ -2,11 +2,13 @@
 import { test, expect } from '@playwright/test'
 import { checkA11y, injectAxe } from 'axe-playwright'
 
-const testEmail = `e2e-${Date.now()}@example.com`
 const testPassword = 'TestPassword123!'
+const seededEmail = 'e2e@example.com'
+const makeUniqueEmail = () => `e2e-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}@example.com`
 
 test.describe('Authentication flow', () => {
   test('register a new account', async ({ page }) => {
+    const testEmail = makeUniqueEmail()
     await page.goto('/register')
     await injectAxe(page)
 
@@ -21,7 +23,7 @@ test.describe('Authentication flow', () => {
   test('logout from dashboard', async ({ page }) => {
     // Login first
     await page.goto('/login')
-    await page.fill('input[type="email"]', testEmail)
+    await page.fill('input[type="email"]', seededEmail)
     await page.fill('input[type="password"]', testPassword)
     await page.click('button[type="submit"]')
     await expect(page).toHaveURL(/\/dashboard/)
@@ -35,7 +37,7 @@ test.describe('Authentication flow', () => {
     await page.goto('/login')
     await injectAxe(page)
 
-    await page.fill('input[type="email"]', testEmail)
+    await page.fill('input[type="email"]', seededEmail)
     await page.fill('input[type="password"]', testPassword)
     await page.click('button[type="submit"]')
 
@@ -46,7 +48,7 @@ test.describe('Authentication flow', () => {
   test('authenticated user redirected from /login to /dashboard', async ({ page }) => {
     // Login first to set cookie
     await page.goto('/login')
-    await page.fill('input[type="email"]', testEmail)
+    await page.fill('input[type="email"]', seededEmail)
     await page.fill('input[type="password"]', testPassword)
     await page.click('button[type="submit"]')
     await expect(page).toHaveURL(/\/dashboard/)
