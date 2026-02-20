@@ -7,6 +7,7 @@ import {
   ERROR_MESSAGES,
   isBackendErrorCode,
 } from '@/shared/error-codes'
+import { getPersistedAccessToken } from '@/lib/session-token'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
@@ -117,11 +118,20 @@ async function parseResponseEnvelope<T>(response: Response): Promise<ApiEnvelope
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let response: Response
 
+  const headers: Record<string, string> = {}
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+  }
+  const token = getPersistedAccessToken()
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       method,
       credentials: 'include',
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(15000),
     })
