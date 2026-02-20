@@ -51,10 +51,43 @@
 - Task components: `src/components/tasks/`
 - Providers: `src/providers/`
 
+## Feature 007: Auth & Session Patterns (Task: T039)
+
+### better-auth Package Role
+- Installed: `npm install better-auth`
+- Used as the client-side auth configuration utility
+- Shares `SECRET_KEY` (HS256) with the backend PyJWT/python-jose — same secret = compatible JWTs
+- `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` in `.env.example` configure the client
+
+### Session Transport
+- All API calls use `credentials: 'include'` (set globally in `src/lib/api-client.ts`)
+- The browser attaches the `access_token` httpOnly cookie automatically on same-origin and allowed-origin requests
+- **Never** read, parse, or store the cookie from JS — it is httpOnly
+
+### Session Expiry Handling
+- `src/lib/query-client.ts` global `QueryCache.onError` handler:
+  - 401 or code `SESSION_EXPIRED` → `window.location.href = '/login?reason=session_expired'`
+  - 403 → `toast.error(...)` + redirect to dashboard
+- Login page (`src/app/(auth)/login/page.tsx`) renders a `role="alert"` banner when `?reason=session_expired` is in the URL
+
+### Proxy Session Check (F05 pattern)
+- `src/proxy.ts` runs on `/dashboard/*` routes (Next.js 16: renamed from `middleware.ts`)
+- Function export: `export default async function proxy(request: Request)` — uses standard `Request`, NOT `NextRequest` (edge runtime not supported in proxy)
+- Parses cookies from `request.headers.get('cookie')` — no `request.cookies` on standard Request
+- **Does** extract the `access_token` cookie value and passes it explicitly:
+  ```ts
+  fetch(`${API_URL}/api/auth/me`, { headers: { Cookie: `access_token=${cookieValue}` } })
+  ```
+- On 401 → redirect to `/login?reason=session_expired`
+- On network error → fail open (let dashboard handle it)
+
+### Task Traceability
+- Every file must include `// Task: T-XXX` or `// Task: TXXX` at the top
+
 ## Testing
 - Unit tests: `src/__tests__/unit/`
 - Hook tests: `src/__tests__/hooks/`
 - Component tests: `src/__tests__/components/`
 - E2E tests: `e2e/`
 - Run tests: `npm test` (Vitest)
-- Run E2E: `npx playwright test`
+- Run E2E: `npm run test:e2e` (self-contained: boots backend + frontend)

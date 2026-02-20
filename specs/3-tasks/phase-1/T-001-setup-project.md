@@ -1,4 +1,4 @@
-# T-001: Setup Project Structure for Console Todo App
+# T-001: Setup Project Structure for Console Focentra App
 
 ## Task Description
 Create the foundational project structure for the Phase 1 Console Todo application as specified in the implementation plan. This includes setting up the directory structure, initializing the Python project, and configuring dependencies.

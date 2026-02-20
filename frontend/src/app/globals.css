@@ -14,38 +14,116 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-card: var(--surface-card);
+  --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
+  --color-glow: var(--glow);
 }
 
 /* Light theme */
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --primary: #3b82f6;
+  --background: #080d18;
+  --foreground: #ecf3ff;
+  --muted: #0f1829;
+  --muted-foreground: #90a4c5;
+  --primary: #5ea7ff;
   --primary-foreground: #ffffff;
-  --destructive: #dc2626;
+  --destructive: #ef5f7c;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --ring: #3b82f6;
+  --border: rgba(153, 182, 232, 0.26);
+  --ring: #7db6ff;
+  --surface-panel: rgba(12, 22, 38, 0.74);
+  --surface-card: rgba(11, 18, 30, 0.62);
+  --border-soft: rgba(153, 182, 232, 0.2);
+  --border-strong: rgba(180, 204, 244, 0.42);
+  --glow: rgba(94, 167, 255, 0.3);
 }
 
 /* Dark theme */
 .dark {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --primary: #60a5fa;
-  --primary-foreground: #0f172a;
-  --destructive: #f87171;
-  --destructive-foreground: #0f172a;
-  --border: #334155;
-  --ring: #60a5fa;
+  --background: #080d18;
+  --foreground: #ecf3ff;
+  --muted: #0f1829;
+  --muted-foreground: #90a4c5;
+  --primary: #5ea7ff;
+  --primary-foreground: #ffffff;
+  --destructive: #ef5f7c;
+  --destructive-foreground: #ffffff;
+  --border: rgba(153, 182, 232, 0.26);
+  --ring: #7db6ff;
+  --surface-panel: rgba(12, 22, 38, 0.74);
+  --surface-card: rgba(11, 18, 30, 0.62);
+  --border-soft: rgba(153, 182, 232, 0.2);
+  --border-strong: rgba(180, 204, 244, 0.42);
+  --glow: rgba(94, 167, 255, 0.3);
+}
+
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", "Segoe UI", "SF Pro Display", Arial, sans-serif;
+}
+
+@layer components {
+  .app-shell {
+    @apply relative min-h-screen overflow-hidden bg-background;
+  }
+
+  .app-shell-gradient {
+    background:
+      linear-gradient(120deg, rgba(56, 189, 248, 0.09) 0%, rgba(96, 165, 250, 0.08) 45%, rgba(148, 163, 184, 0.05) 100%);
+  }
+
+  .surface-panel {
+    @apply rounded-2xl border bg-surface-panel/90 backdrop-blur-xl;
+    border-color: var(--border-soft);
+    box-shadow: 0 24px 72px -36px var(--glow);
+  }
+
+  .surface-card {
+    @apply rounded-xl border bg-surface-card/85 backdrop-blur-md;
+    border-color: var(--border-soft);
+  }
+
+  .surface-card-hover {
+    @apply transition-all duration-200;
+  }
+
+  .surface-card-hover:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-strong);
+    box-shadow: 0 22px 48px -30px var(--glow);
+  }
+
+  .text-display {
+    @apply text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl;
+  }
+
+  .text-heading {
+    @apply text-2xl font-bold tracking-tight sm:text-3xl;
+  }
+
+  .text-subheading {
+    @apply text-lg font-semibold tracking-tight;
+  }
+
+  .text-body {
+    @apply text-base leading-relaxed text-muted-foreground;
+  }
+
+  .input-premium {
+    @apply w-full rounded-xl border bg-background/70 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition;
+    border-color: var(--border-soft);
+  }
+
+  .input-premium:focus {
+    @apply outline-none ring-2 ring-offset-2;
+    border-color: var(--border-strong);
+    box-shadow: 0 0 0 1px var(--color-ring);
+  }
 }

@@ -1,297 +1,204 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+# Task: T020 — Apply require_authenticated_user to all task routes (FR-011)
+# Task: T021 — Add enforce_user_id_match guard before any DB query (SEC-003)
+# Task: T022 — TaskService.create_task now receives current_user.id (FR-005)
+# Task: T023 — TaskService user-scoped queries (FR-006, SEC-004)
+# Spec: @specs/1-specify/phase-2/feature-03-auth-db-monorepo.md (FR-005–FR-007, SEC-003, SEC-004)
+# ADR: @history/adr/0013-two-layer-authorization-semantics.md
+from fastapi import APIRouter, Depends, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import List
-from ..database import get_db_session
-from ..services.task_service import (
-    get_tasks, create_task, get_task_by_id, update_task, 
-    delete_task, toggle_completion
-)
-from ..services.user_service import get_user_by_id
-from ..utils.auth import get_current_user_id
-from ..utils.helpers import create_error_response
-from ..schemas.task import TaskCreate, TaskUpdate, TaskResponse
+from uuid import UUID
 
+from src.database import get_db_session
+from src.models.user import User
+from src.middleware.auth import require_authenticated_user
+from src.services.task_service import (
+    get_tasks,
+    create_task,
+    get_task_by_id,
+    update_task,
+    delete_task,
+    toggle_completion,
+    get_tasks_overview,
+    add_focus_minutes,
+)
+from src.utils.error_mapper import ForbiddenError
+from src.schemas.task import FocusSessionRequest, TaskCreate, TaskUpdate
 
 router = APIRouter(tags=["tasks"])
+task_tools_router = APIRouter(tags=["tasks"])
 
 
-@router.get("/tasks", response_model=List[TaskResponse])
+def _enforce_user_id_match(user_id: str, current_user: User) -> None:
+    """
+    Two-layer authorization — Layer 1 (SEC-003):
+    Raise ForbiddenError if {user_id} path param does not match authenticated user's id.
+    Fires BEFORE any database query — no DB lookup happens on mismatch.
+    """
+    if str(user_id) != str(current_user.id):
+        raise ForbiddenError()
+
+
+@router.get("/tasks")
 async def get_user_tasks(
     user_id: str,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
-    current_user_id: str = Depends(get_current_user_id),
+    current_user: User = Depends(require_authenticated_user),
     db: AsyncSession = Depends(get_db_session),
-):
-    """
-    Retrieve paginated tasks for the specified user, ordered by newest first.
-    """
-    if user_id != current_user_id:
-        error_response = create_error_response(
-            code="UNAUTHORIZED_ACCESS",
-            message="You can only access your own tasks"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error_response.model_dump()
-        )
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        error_response = create_error_response(
-            code="USER_NOT_FOUND",
-            message=f"User with id {user_id} not found"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-
-    tasks = await get_tasks(db, user_id, skip=skip, limit=limit)
-    return tasks
+) -> JSONResponse:
+    """List tasks for the authenticated user (paginated, newest first)."""
+    _enforce_user_id_match(user_id, current_user)
+    tasks = await get_tasks(db, str(current_user.id), skip=skip, limit=limit)
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({"success": True, "data": tasks, "error": None}),
+    )
 
 
-@router.post("/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/tasks", status_code=201)
 async def create_user_task(
     user_id: str,
     task_data: TaskCreate,
-    current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Create a new task for the specified user.
-    """
-    # Verify that the user_id in the path matches the authenticated user
-    if user_id != current_user_id:
-        error_response = create_error_response(
-            code="UNAUTHORIZED_ACCESS",
-            message="You can only create tasks for yourself"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error_response.model_dump()
-        )
-    
-    # Verify the user exists
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        error_response = create_error_response(
-            code="USER_NOT_FOUND",
-            message=f"User with id {user_id} not found"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    # Create the task
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Create a task owned by the authenticated user (FR-005)."""
+    _enforce_user_id_match(user_id, current_user)
     task = await create_task(
-        db, 
-        user_id, 
-        task_data.title, 
-        task_data.description
-    )
-    
-    return task
-
-
-@router.get("/tasks/{task_id}", response_model=TaskResponse)
-async def get_specific_task(
-    user_id: str,
-    task_id: str,  # Using string to accommodate UUID
-    current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Retrieve a specific task for the specified user.
-    """
-    # Verify that the user_id in the path matches the authenticated user
-    if user_id != current_user_id:
-        error_response = create_error_response(
-            code="UNAUTHORIZED_ACCESS",
-            message="You can only access your own tasks"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error_response.model_dump()
-        )
-    
-    # Verify the user exists
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        error_response = create_error_response(
-            code="USER_NOT_FOUND",
-            message=f"User with id {user_id} not found"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    # Get the specific task
-    task = await get_task_by_id(db, user_id, task_id)
-    if not task:
-        error_response = create_error_response(
-            code="TASK_NOT_FOUND",
-            message=f"Task with id {task_id} not found for user {user_id}"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    return task
-
-
-@router.put("/tasks/{task_id}", response_model=TaskResponse)
-async def update_user_task(
-    user_id: str,
-    task_id: str,  # Using string to accommodate UUID
-    task_data: TaskUpdate,
-    current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Update a specific task for the specified user.
-    """
-    # Verify that the user_id in the path matches the authenticated user
-    if user_id != current_user_id:
-        error_response = create_error_response(
-            code="UNAUTHORIZED_ACCESS",
-            message="You can only update your own tasks"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error_response.model_dump()
-        )
-    
-    # Verify the user exists
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        error_response = create_error_response(
-            code="USER_NOT_FOUND",
-            message=f"User with id {user_id} not found"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    # Update the task (pass None to keep existing value)
-    updated_task = await update_task(
         db,
-        user_id,
-        task_id,
+        str(current_user.id),
         task_data.title,
         task_data.description,
+        task_data.priority,
+        task_data.due_date,
+        task_data.status,
     )
-    
-    if not updated_task:
-        error_response = create_error_response(
-            code="TASK_NOT_FOUND",
-            message=f"Task with id {task_id} not found for user {user_id}"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    return updated_task
+    return JSONResponse(
+        status_code=201,
+        content=jsonable_encoder({"success": True, "data": task, "error": None}),
+    )
 
 
-@router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.get("/tasks/{task_id}")
+async def get_specific_task(
+    user_id: str,
+    task_id: UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """
+    Get a specific task.
+    Two-layer authorization:
+      Layer 1: ForbiddenError if user_id path ≠ current_user.id (no DB query)
+      Layer 2: TaskNotFoundError (via service) if task_id not owned by user
+    """
+    _enforce_user_id_match(user_id, current_user)
+    task = await get_task_by_id(db, str(current_user.id), str(task_id))
+    if not task:
+        from src.utils.error_mapper import TaskNotFoundError
+        raise TaskNotFoundError()
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({"success": True, "data": task, "error": None}),
+    )
+
+
+@router.put("/tasks/{task_id}")
+async def update_user_task(
+    user_id: str,
+    task_id: UUID,
+    task_data: TaskUpdate,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Update a task owned by the authenticated user."""
+    _enforce_user_id_match(user_id, current_user)
+    updated = await update_task(
+        db,
+        str(current_user.id),
+        str(task_id),
+        task_data.title,
+        task_data.description,
+        task_data.priority,
+        task_data.due_date,
+        task_data.status,
+    )
+    if not updated:
+        from src.utils.error_mapper import TaskNotFoundError
+        raise TaskNotFoundError()
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({"success": True, "data": updated, "error": None}),
+    )
+
+
+@router.delete("/tasks/{task_id}", status_code=204)
 async def delete_user_task(
     user_id: str,
-    task_id: str,  # Using string to accommodate UUID
-    current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Delete a specific task for the specified user.
-    """
-    # Verify that the user_id in the path matches the authenticated user
-    if user_id != current_user_id:
-        error_response = create_error_response(
-            code="UNAUTHORIZED_ACCESS",
-            message="You can only delete your own tasks"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error_response.model_dump()
-        )
-    
-    # Verify the user exists
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        error_response = create_error_response(
-            code="USER_NOT_FOUND",
-            message=f"User with id {user_id} not found"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    # Delete the task
-    success = await delete_task(db, user_id, task_id)
-    
+    task_id: UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Delete a task owned by the authenticated user."""
+    _enforce_user_id_match(user_id, current_user)
+    success = await delete_task(db, str(current_user.id), str(task_id))
     if not success:
-        error_response = create_error_response(
-            code="TASK_NOT_FOUND",
-            message=f"Task with id {task_id} not found for user {user_id}"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    return
+        from src.utils.error_mapper import TaskNotFoundError
+        raise TaskNotFoundError()
 
 
-@router.patch("/tasks/{task_id}/complete", response_model=TaskResponse)
+@router.patch("/tasks/{task_id}/complete")
 async def toggle_task_completion(
     user_id: str,
-    task_id: str,  # Using string to accommodate UUID
-    current_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Toggle the completion status of a specific task for the specified user.
-    """
-    # Verify that the user_id in the path matches the authenticated user
-    if user_id != current_user_id:
-        error_response = create_error_response(
-            code="UNAUTHORIZED_ACCESS",
-            message="You can only update your own tasks"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error_response.model_dump()
-        )
-    
-    # Verify the user exists
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        error_response = create_error_response(
-            code="USER_NOT_FOUND",
-            message=f"User with id {user_id} not found"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    # Toggle the task completion
-    updated_task = await toggle_completion(db, user_id, task_id)
-    
-    if not updated_task:
-        error_response = create_error_response(
-            code="TASK_NOT_FOUND",
-            message=f"Task with id {task_id} not found for user {user_id}"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_response.model_dump()
-        )
-    
-    return updated_task
+    task_id: UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Toggle completion status of a task owned by the authenticated user."""
+    _enforce_user_id_match(user_id, current_user)
+    updated = await toggle_completion(db, str(current_user.id), str(task_id))
+    if not updated:
+        from src.utils.error_mapper import TaskNotFoundError
+        raise TaskNotFoundError()
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({"success": True, "data": updated, "error": None}),
+    )
+
+
+@task_tools_router.get("/overview")
+async def get_authenticated_user_tasks_overview(
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Get progress overview metrics for the authenticated user's tasks."""
+    overview = await get_tasks_overview(db, str(current_user.id))
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({"success": True, "data": overview, "error": None}),
+    )
+
+
+@task_tools_router.post("/{task_id}/focus")
+async def add_task_focus_minutes(
+    task_id: UUID,
+    focus_data: FocusSessionRequest,
+    current_user: User = Depends(require_authenticated_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> JSONResponse:
+    """Add focused minutes to a task owned by the authenticated user."""
+    updated = await add_focus_minutes(
+        db,
+        str(current_user.id),
+        str(task_id),
+        focus_data.minutes,
+    )
+    if not updated:
+        from src.utils.error_mapper import TaskNotFoundError
+        raise TaskNotFoundError()
+    return JSONResponse(
+        status_code=200,
+        content=jsonable_encoder({"success": True, "data": updated, "error": None}),
+    )

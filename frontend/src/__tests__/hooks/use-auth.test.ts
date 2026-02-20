@@ -59,7 +59,7 @@ describe('useAuth', () => {
     expect(caughtError).toMatchObject({ code: 'INVALID_CREDENTIALS' })
   })
 
-  it('logout — calls router.push("/login")', async () => {
+  it('logout — calls router.push("/")', async () => {
     mockPush.mockClear()
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() })
 
@@ -69,6 +69,6 @@ describe('useAuth', () => {
       await result.current.logout()
     })
 
-    expect(mockPush).toHaveBeenCalledWith('/login')
+    expect(mockPush).toHaveBeenCalledWith('/')
   })
 })

@@ -1,5 +1,5 @@
 // Task: T058 | Component tests for TaskItem
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
@@ -14,6 +14,10 @@ const sampleTask: Task = {
   title: 'Test Task',
   description: 'A description for the task',
   is_completed: false,
+  priority: 'MEDIUM',
+  due_date: null,
+  focus_minutes: 0,
+  status: 'TODO',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   owner_id: 'user-123',

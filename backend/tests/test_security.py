@@ -1,9 +1,10 @@
+# Task: T064 — align security tests with AuthService hashing contract
 import pytest
 from uuid import uuid4
 
 from src.models.user import User
 from src.models.task import Task
-from src.utils.auth import get_password_hash
+from src.services.auth_service import hash_password as get_password_hash
 from tests.conftest import make_auth_header
 
 

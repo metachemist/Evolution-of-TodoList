@@ -27,6 +27,11 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
     formState: { errors, isSubmitting },
   } = useForm<TaskCreateFormData>({
     resolver: zodResolver(taskCreateSchema),
+    defaultValues: {
+      priority: 'MEDIUM',
+      status: 'TODO',
+      due_date: '',
+    },
   })
 
   async function onSubmit(data: TaskCreateFormData) {
@@ -35,6 +40,9 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
       await createTask.mutateAsync({
         title: data.title,
         description: data.description || undefined,
+        priority: data.priority,
+        status: data.status,
+        due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
       })
       reset()
       onOpenChange(false)
@@ -57,7 +65,7 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
     <Modal open={open} onOpenChange={handleOpenChange} title="Create Task">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         {serverError && (
-          <div role="alert" className="rounded-md border border-destructive px-4 py-3 text-sm text-destructive">
+          <div role="alert" className="rounded-xl border border-destructive/55 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {serverError}
           </div>
         )}
@@ -68,6 +76,48 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
           error={errors.title?.message}
           autoFocus
         />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="priority" className="text-sm font-medium text-foreground">
+              Priority
+            </label>
+            <select id="priority" {...register('priority')} className="input-premium">
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+            </select>
+            {errors.priority && (
+              <p className="text-sm text-destructive" role="alert">{errors.priority.message}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="status" className="text-sm font-medium text-foreground">
+              Status
+            </label>
+            <select id="status" {...register('status')} className="input-premium">
+              <option value="TODO">TODO</option>
+              <option value="IN_PROGRESS">IN PROGRESS</option>
+              <option value="DONE">DONE</option>
+            </select>
+            {errors.status && (
+              <p className="text-sm text-destructive" role="alert">{errors.status.message}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="due_date" className="text-sm font-medium text-foreground">
+            Due Date <span className="text-muted-foreground">(optional)</span>
+          </label>
+          <input
+            id="due_date"
+            type="datetime-local"
+            {...register('due_date')}
+            className="input-premium"
+          />
+          {errors.due_date && (
+            <p className="text-sm text-destructive" role="alert">{errors.due_date.message}</p>
+          )}
+        </div>
         <div className="flex flex-col gap-1">
           <label htmlFor="description" className="text-sm font-medium text-foreground">
             Description <span className="text-muted-foreground">(optional)</span>
@@ -76,7 +126,7 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
             id="description"
             {...register('description')}
             rows={3}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="input-premium min-h-[96px] resize-y"
             placeholder="Add a description..."
           />
           {errors.description && (
@@ -85,7 +135,7 @@ export function TaskCreateModal({ open, onOpenChange }: TaskCreateModalProps) {
         </div>
 
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button type="submit" size="sm" loading={isSubmitting}>

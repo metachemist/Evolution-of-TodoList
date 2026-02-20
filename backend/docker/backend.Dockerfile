@@ -14,7 +14,7 @@ RUN pip install poetry
 COPY pyproject.toml .
 
 # Install dependencies
-RUN poetry install --no-dev --no-interaction
+RUN poetry install --without dev --no-interaction
 
 # Copy the rest of the application
 COPY . .
@@ -22,5 +22,6 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Task: T027 — Run alembic upgrade head before starting server (FR-018)
+# Migrations are idempotent: safe to run on a fresh DB or one already at head.
+CMD ["sh", "-c", "poetry run alembic upgrade head && poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000"]
