@@ -53,6 +53,7 @@ export function RegisterForm() {
       />
       <Input
         label="Password"
+        labelHint="Min 8 chars, uppercase, lowercase, number, special character."
         type="password"
         autoComplete="new-password"
         registration={register('password')}
