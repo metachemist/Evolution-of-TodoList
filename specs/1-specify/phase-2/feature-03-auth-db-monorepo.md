@@ -101,9 +101,9 @@ Any visitor who has not logged in is prevented from accessing task management fe
 
 **Acceptance Scenarios**:
 
-1. **Given** a visitor is not authenticated, **When** they attempt to view tasks, **Then** they are denied access and redirected to the login page
+1. **Given** a visitor is not authenticated, **When** they attempt to view tasks, **Then** they are denied access and redirected to the landing page (`/`)
 2. **Given** a visitor is not authenticated, **When** they attempt to create, update, or delete a task, **Then** the operation is rejected with a 401 status
-3. **Given** a visitor is not authenticated, **When** they navigate to a protected page, **Then** they are redirected to the login page
+3. **Given** a visitor is not authenticated, **When** they navigate to a protected page, **Then** they are redirected to the landing page (`/`)
 
 ---
 
@@ -139,7 +139,7 @@ The existing application has tasks stored without user ownership. When authentic
 
 - **FR-001**: System MUST allow new users to register with an email address and password
 - **FR-002**: System MUST authenticate returning users with their email and password
-- **FR-003**: System MUST issue a session credential as an httpOnly cookie upon successful authentication. The frontend MUST NOT handle or store the raw credential. The frontend MUST use `credentials: 'include'` on all API requests so the browser attaches the cookie to cross-origin requests.
+- **FR-003**: System MUST issue a session credential on successful authentication and support dual transport: `Authorization: Bearer <token>` and `access_token` cookie. The frontend may persist and send the Bearer token while also supporting cookie credentials for browser flows.
 - **FR-004**: System MUST verify the session credential on every request to a protected resource
 - **FR-005**: System MUST associate every newly created task with the authenticated user who created it
 - **FR-006**: System MUST filter all task queries to return only tasks belonging to the authenticated user
@@ -162,7 +162,7 @@ The existing application has tasks stored without user ownership. When authentic
 
 - **User**: Represents a registered person in the system. Key attributes: unique identifier, email address (unique), account creation timestamp. Email serves as the sole user identifier. Each user owns zero or more tasks.
 - **Task**: Represents a to-do item belonging to a user. Key attributes: unique identifier, owner (user, required foreign key), title (required, max 255 characters), description (optional, max 5000 characters), completion status, creation timestamp, last-modified timestamp. Each task belongs to exactly one user.
-- **Session**: Represents an active authentication session. Key attributes: session credential (httpOnly cookie), associated user, creation timestamp, expiry timestamp (24 hours from creation). Each session belongs to exactly one user.
+- **Session**: Represents an active authentication session. Key attributes: session credential (Bearer token and/or cookie), associated user, creation timestamp, expiry timestamp (24 hours from creation). Each session belongs to exactly one user.
 
 ## Error Message Catalog
 
@@ -218,9 +218,9 @@ This feature introduces or modifies the following endpoints. All endpoints are c
 - Method: `POST`
 - Path: `/api/auth/register`
 - Request body: `{ "email": "<valid email>", "password": "<string meeting FR-012 rules>" }`
-- Success (201): Backend sets httpOnly, Secure, SameSite=Lax cookie. Body:
+- Success (201): Backend sets httpOnly, Secure, SameSite=None cookie. Body:
   `{ "success": true, "data": { "access_token": "<token>", "token_type": "bearer" }, "error": null }`.
-  The `access_token` in `data` is provided for non-browser clients (API testing tools, future mobile apps). The frontend MUST ignore it and rely solely on the cookie.
+  The `access_token` in `data` is available for frontend and non-browser clients using Bearer authentication.
 - Error (409): EMAIL_ALREADY_EXISTS
 - Error (400): VALIDATION_ERROR (invalid email or weak password)
 
@@ -229,16 +229,16 @@ This feature introduces or modifies the following endpoints. All endpoints are c
 - Method: `POST`
 - Path: `/api/auth/login`
 - Request body: `{ "email": "<valid email>", "password": "<string>" }`
-- Success (200): Backend sets httpOnly, Secure, SameSite=Lax cookie. Body:
+- Success (200): Backend sets httpOnly, Secure, SameSite=None cookie. Body:
   `{ "success": true, "data": { "access_token": "<token>", "token_type": "bearer" }, "error": null }`.
-  The `access_token` in `data` is provided for non-browser clients. The frontend MUST ignore it and rely solely on the cookie.
+  The `access_token` in `data` is available for frontend and non-browser clients using Bearer authentication.
 - Error (401): INVALID_CREDENTIALS
 
 ### Session Check
 
 - Method: `GET`
 - Path: `/api/auth/me`
-- Authentication: httpOnly cookie (attached automatically by browser)
+- Authentication: `Authorization: Bearer <token>` or `access_token` cookie
 - Success (200): `{ "success": true, "data": { "id": "<uuid>", "email": "<string>" }, "error": null }`
 - Error (401): SESSION_EXPIRED or INVALID_TOKEN
 
@@ -246,7 +246,7 @@ This feature introduces or modifies the following endpoints. All endpoints are c
 
 - Method: `POST`
 - Path: `/api/auth/logout`
-- Authentication: httpOnly cookie
+- Authentication: Optional `Authorization: Bearer <token>` or `access_token` cookie
 - Success (200): Backend clears the httpOnly cookie. Always succeeds even with invalid/missing cookie.
   Response body: `{ "success": true, "data": { "logged_out": true }, "error": null }`
 
@@ -263,10 +263,10 @@ All existing task endpoints from feature-01 remain unchanged in their paths and 
 
 | Path | Behavior | Auth Required |
 |------|----------|---------------|
-| `/` | Redirect to `/dashboard` if authenticated, otherwise redirect to `/login` | No |
+| `/` | Render public Landing Page with CTA navigation to `/login` and `/register` (registration flow) | No |
 | `/login` | Render login form. Redirect to `/dashboard` if already authenticated. | No (redirects if auth) |
 | `/register` | Render registration form. Redirect to `/dashboard` if already authenticated. | No (redirects if auth) |
-| `/dashboard` | Render task management interface. Redirect to `/login` if not authenticated. | Yes |
+| `/dashboard` | Render task management interface. Redirect to `/` if not authenticated. | Yes |
 
 All other paths return a 404 page with the message: "Page not found." and a link back to the dashboard.
 
@@ -274,14 +274,14 @@ All other paths return a 404 page with the message: "Page not found." and a link
 
 ### Security
 
-- **SEC-001**: The session credential MUST be transmitted as an httpOnly, Secure, SameSite=Lax cookie. The frontend MUST NOT handle raw tokens.
+- **SEC-001**: The session credential MUST support Bearer header transport and cookie transport. When cookie transport is used, the backend cookie attributes MUST be httpOnly, Secure, SameSite=None.
 - **SEC-002**: The system MUST return 401 for missing or invalid session credentials
 - **SEC-003**: The system MUST check the `{user_id}` path parameter FIRST, before any database query. If the authenticated user's ID does not match `{user_id}`, return 403 immediately (no DB lookup needed).
 - **SEC-004**: If the `{user_id}` path parameter matches but the specific `{task_id}` is not owned by the user (e.g., direct ID guessing), return 404 (not 403) to avoid revealing resource existence. This is the second layer of defense, checked only after SEC-003 passes.
 - **SEC-005**: All user inputs MUST be validated against schema before processing
 - **SEC-006**: Passwords MUST be hashed using a one-way cryptographic hash before storage
 - **SEC-007**: Rate limiting MUST be enforced at 1000 requests per hour per authenticated user, and 100 requests per hour per IP for unauthenticated endpoints, per constitution Section 3
-- **SEC-008**: Backend MUST configure CORS to allow the frontend origin with `credentials: true`, using an explicit origin allowlist (not wildcard `*`). Without this, cookie-based auth will silently fail on cross-origin requests. Consistent with feature-01 FR-021.
+- **SEC-008**: Backend MUST configure CORS to allow the frontend origin with `credentials: true`, using an explicit origin allowlist (not wildcard `*`). This is required for cookie-compatible browser auth flows. Consistent with feature-01 FR-021.
 
 ### Accessibility
 
@@ -355,7 +355,7 @@ The following artifacts MUST be produced as part of this feature:
 - All authentication-related backend code (registration, login, logout, session check, token verification, password hashing)
 - Database schema migration files creating users and tasks tables with constraints
 - Frontend authentication pages (login, register) and route protection
-- Frontend session management (cookie-based auth, session check on load)
+- Frontend session management (hybrid auth transport, session check on load)
 - Updated `frontend/CLAUDE.md` and `backend/CLAUDE.md` with auth-specific patterns, as required by the constitution for Phase II+
 - Automated tests meeting the 60% coverage target for auth business logic
 - Every code file MUST include a comment referencing the task ID from `specs/3-tasks/` that it implements, per constitution traceability requirements
@@ -366,7 +366,7 @@ The following artifacts MUST be produced as part of this feature:
 
 - Users authenticate with email and password only (no third-party OAuth providers in this phase)
 - The application is a web-based system where the frontend and backend communicate over a network
-- The frontend from feature-02 already supports httpOnly cookie authentication (the backend sets the cookie; the frontend uses `credentials: 'include'` on all fetch calls)
+- The frontend from feature-02 supports hybrid authentication (Bearer header and cookie credentials) and session checks via `GET /api/auth/me`.
 - The backend from feature-01 already has auth endpoint stubs (register, login, me, logout) that will be connected to persistent storage
 - The system operates in a single-region deployment for this phase
 - The existing in-memory task store will be replaced entirely by persistent database storage
@@ -375,7 +375,7 @@ The following artifacts MUST be produced as part of this feature:
 ## Dependencies
 
 - **Feature-01** (FastAPI Todo Backend) must be complete — provides the task CRUD endpoints and auth endpoint stubs
-- **Feature-02** (Next.js Todo Frontend) must be complete — provides the user interface, auth pages, and cookie-based session handling
+- **Feature-02** (Next.js Todo Frontend) must be complete — provides the user interface, auth pages, and hybrid session handling
 - A persistent relational database must be available in the deployment environment
 - A shared secret must be available as an environment variable for signing session credentials
 - Any conflicting auth/session/error details in sibling Phase II specs MUST be synchronized to this feature's canonical rules before code implementation

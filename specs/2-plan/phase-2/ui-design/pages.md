@@ -8,7 +8,7 @@
 
 | Path | File | Auth | Layout Group | Component Type |
 |---|---|---|---|---|
-| `/` | `app/page.tsx` | No | Root | Server Component (redirect only) |
+| `/` | `app/page.tsx` | No | Root | Server Component (public landing page) |
 | `/login` | `app/(auth)/login/page.tsx` | No (redirects if auth) | (auth) | Server + Client |
 | `/register` | `app/(auth)/register/page.tsx` | No (redirects if auth) | (auth) | Server + Client |
 | `/dashboard` | `app/(dashboard)/dashboard/page.tsx` | Yes | (dashboard) | Server + Client |
@@ -30,7 +30,7 @@ app/layout.tsx (Root)
 │
 └── app/(dashboard)/layout.tsx
     ├── Fetches GET /api/auth/me (Server Component)
-    ├── Redirects to /login on 401
+    ├── Redirects to / on 401
     ├── Wraps children in UserProvider
     ├── Navigation bar (logo, email display, theme toggle, logout button)
     └── Children: dashboard/page.tsx
@@ -42,16 +42,15 @@ app/layout.tsx (Root)
 
 **File**: `app/page.tsx`
 **Type**: Server Component
-**Behavior**: Pure redirect. No visible UI.
+**Behavior**: Public landing page with visible marketing UI and entry CTAs.
 
 ```
-IF authenticated (cookie exists + /api/auth/me returns 200):
-  → Redirect to /dashboard
-ELSE:
-  → Redirect to /login
+Landing page content renders at `/`.
+Primary CTA ("Get Started") navigates to `/login`.
+Secondary CTA ("Create account") navigates to `/register`.
 ```
 
-**Note**: This redirect logic can be handled in `proxy.ts` for efficiency, or in the page itself. The proxy.ts approach avoids rendering any React tree.
+**Note**: `/` is intentionally public and never guarded.
 
 ---
 

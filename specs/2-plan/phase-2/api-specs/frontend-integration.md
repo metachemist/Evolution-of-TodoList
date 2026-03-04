@@ -6,12 +6,12 @@
 
 This document defines how the Next.js frontend integrates with the FastAPI backend. All communication flows through a centralized API client (`lib/api-client.ts`) per FR-018.
 
-## Transport: httpOnly Cookie Authentication
+## Transport: Hybrid JWT Authentication
 
-- **Mechanism**: The backend sets `access_token` as an httpOnly, Secure, SameSite=Lax cookie on login/register
-- **Client-side calls**: Use `credentials: 'include'` — browser attaches cookie automatically
-- **Server-side calls (RSC)**: Forward cookie via `cookies().get('access_token')` in the `Cookie` header
-- **No Authorization header**: The frontend never reads or sends the JWT as a Bearer token
+- **Mechanism**: The backend returns `access_token` in JSON and also sets `access_token` as httpOnly, Secure, SameSite=None cookie on login/register
+- **Client-side calls**: Use Bearer header when token is available; keep `credentials: 'include'` enabled
+- **Server-side calls (RSC)**: Forward cookie via `cookies().get('access_token')` in the `Cookie` header for session checks
+- **Precedence**: Backend validates `Authorization: Bearer` first, then cookie fallback
 
 ## Base URL
 
@@ -26,9 +26,9 @@ This document defines how the Next.js frontend integrates with the FastAPI backe
 ```
 Request:  { email: string, password: string }
 Response: 201 { access_token: string, token_type: "bearer" }
-          + Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax
+          + Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=None
 Errors:   409 EMAIL_ALREADY_EXISTS
-Frontend: Ignore response body token. Cookie is set automatically.
+Frontend: Persist response body token for Bearer auth; cookie is also set.
           Redirect to /dashboard on success.
 ```
 
@@ -36,20 +36,20 @@ Frontend: Ignore response body token. Cookie is set automatically.
 ```
 Request:  { email: string, password: string }
 Response: 200 { access_token: string, token_type: "bearer" }
-          + Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax
+          + Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=None
 Errors:   401 INVALID_CREDENTIALS
-Frontend: Ignore response body token. Cookie is set automatically.
+Frontend: Persist response body token for Bearer auth; cookie is also set.
           Redirect to /dashboard on success.
 ```
 
 #### GET /api/auth/me
 ```
-Request:  No body. Cookie sent automatically.
+Request:  No body. Bearer header or cookie accepted.
 Response: 200 { id: string (UUID), email: string }
 Errors:   401 (expired/invalid token)
 Frontend: Called from (dashboard) layout RSC.
           Cookie forwarded explicitly via cookies() API.
-          On 401: redirect to /login.
+          On 401: redirect to /.
 ```
 
 #### POST /api/auth/logout
@@ -58,12 +58,12 @@ Request:  No body. Cookie sent automatically.
 Response: 200 { message: "Logged out successfully" }
           + Set-Cookie: access_token=; expires=Thu, 01 Jan 1970... (clears cookie)
 Errors:   None (always returns 200)
-Frontend: Clear UserContext, redirect to /login.
+Frontend: Clear UserContext, redirect to /.
 ```
 
 ### Tasks
 
-All task endpoints require a valid `access_token` cookie. The `{user_id}` path parameter must match the JWT `sub` claim.
+All task endpoints require a valid Bearer token or `access_token` cookie. The `{user_id}` path parameter must match the JWT `sub` claim.
 
 #### GET /api/{user_id}/tasks?skip=0&limit=20
 ```

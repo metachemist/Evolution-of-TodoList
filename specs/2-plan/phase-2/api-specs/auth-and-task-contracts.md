@@ -23,9 +23,9 @@
 
 | Method | Path | Auth | Success | Description |
 |--------|------|------|---------|-------------|
-| POST | `/api/auth/register` | None | 201 | Register new user; issues httpOnly cookie |
-| POST | `/api/auth/login` | None | 200 | Authenticate user; issues httpOnly cookie |
-| POST | `/api/auth/logout` | Optional | 200 | Clear httpOnly cookie; always succeeds |
+| POST | `/api/auth/register` | None | 201 | Register new user; returns token body and sets auth cookie |
+| POST | `/api/auth/login` | None | 200 | Authenticate user; returns token body and sets auth cookie |
+| POST | `/api/auth/logout` | Optional | 200 | Clear auth cookie; always succeeds |
 | GET | `/api/auth/me` | Required | 200 | Return current user id + email |
 
 ### Task Endpoints (protected — session required)
@@ -46,7 +46,7 @@
 When a request arrives at a protected endpoint, the backend resolves the session credential in this order:
 
 1. **Check `Authorization: Bearer <token>` header** — if present and valid, use it
-2. **Else check `access_token` httpOnly cookie** — if present and valid, use it
+2. **Else check `access_token` cookie** — if present and valid, use it
 3. **Else raise 401 UNAUTHORIZED**
 
 **Rationale**: Bearer header takes priority to support non-browser clients (API testing tools, future mobile clients) while the browser uses the cookie automatically.
@@ -90,9 +90,9 @@ Response body:
 ```json
 { "success": true, "data": { "access_token": "<jwt>", "token_type": "bearer" }, "error": null }
 ```
-Response headers: `Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Max-Age=86400; Path=/`
+Response headers: `Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=None; Max-Age=86400; Path=/`
 
-Note: `access_token` in the body is for non-browser clients only. Frontend ignores it and uses the cookie.
+Note: `access_token` in the body can be used by frontend and non-browser clients for `Authorization: Bearer` requests.
 
 ### POST /api/auth/login → 200
 
@@ -104,7 +104,7 @@ Response body:
 ```json
 { "success": true, "data": { "access_token": "<jwt>", "token_type": "bearer" }, "error": null }
 ```
-Response headers: `Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=Lax; Max-Age=86400; Path=/`
+Response headers: `Set-Cookie: access_token=<jwt>; HttpOnly; Secure; SameSite=None; Max-Age=86400; Path=/`
 
 ### POST /api/auth/logout → 200
 
@@ -113,7 +113,7 @@ Response body:
 ```json
 { "success": true, "data": { "logged_out": true }, "error": null }
 ```
-Response headers: `Set-Cookie: access_token=; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/`
+Response headers: `Set-Cookie: access_token=; HttpOnly; Secure; SameSite=None; Max-Age=0; Path=/`
 
 ### GET /api/auth/me → 200
 
@@ -162,7 +162,7 @@ Response body:
 | Setting | Value |
 |---------|-------|
 | `allow_origins` | `[os.getenv("CORS_ORIGIN", "http://localhost:3000")]` — explicit allowlist, **no wildcard** |
-| `allow_credentials` | `True` — required for httpOnly cookie transport |
+| `allow_credentials` | `True` — required when cookie credentials are used |
 | `allow_methods` | `["*"]` |
 | `allow_headers` | `["*"]` |
 
@@ -178,6 +178,17 @@ Response body:
 | Unauthenticated IP | `rate:ip:{ip_address}:{epoch_hour}` | 100 req | 1 hour |
 
 Public endpoints (login, register) are rate-limited by IP. Protected endpoints are rate-limited by user_id (extracted from JWT, not from Depends()).
+
+---
+
+## Frontend Route Classification (Phase II UI)
+
+| Route | Classification | Behavior |
+|-------|----------------|----------|
+| `/` | Public | Render Landing Page with CTA actions (`/login`, `/register`) |
+| `/login` | Public (auth-entry) | Render login form; redirect authenticated users to `/dashboard` |
+| `/register` | Public (auth-entry) | Render registration form; redirect authenticated users to `/dashboard` |
+| `/dashboard` | Protected | Requires auth; unauthenticated users are redirected to `/` |
 
 ---
 

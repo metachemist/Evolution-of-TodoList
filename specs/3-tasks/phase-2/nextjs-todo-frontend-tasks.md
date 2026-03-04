@@ -8,7 +8,7 @@
 
 ## Implementation Strategy
 
-Build a responsive Next.js 16+ frontend (App Router) that provides authenticated task management by integrating with the existing FastAPI backend. Authentication uses httpOnly cookies set by the backend. All task mutations use optimistic updates with rollback. The UI supports dark/light mode and meets WCAG 2.1 Level AA.
+Build a responsive Next.js 16+ frontend (App Router) that provides authenticated task management by integrating with the existing FastAPI backend. Authentication uses hybrid transport (`Authorization` header with cookie compatibility). The app serves a public landing page at `/`. All task mutations use optimistic updates with rollback. The UI supports dark/light mode and meets WCAG 2.1 Level AA.
 
 **MVP Scope**: User Story 1 (Registration & Login) + User Story 2 (Viewing Tasks) — delivers a working authenticated app that displays tasks.
 
@@ -60,8 +60,8 @@ Build a responsive Next.js 16+ frontend (App Router) that provides authenticated
 - [X] T012 Configure TanStack Query client in `frontend/src/lib/query-client.ts` with `QueryCache.onError` global handler for 401 → redirect `/login?reason=session_expired` and 403 → toast + redirect `/dashboard`
 - [X] T013 [P] Create QueryProvider client component in `frontend/src/providers/QueryProvider.tsx` wrapping children in `QueryClientProvider`
 - [X] T014 Create root layout in `frontend/src/app/layout.tsx` with ThemeProvider (next-themes), QueryProvider, Sonner Toaster, and `<noscript>` fallback message "This application requires JavaScript to run."
-- [X] T015 [P] Implement `frontend/src/app/proxy.ts` cookie-presence check: redirect unauthenticated requests from `/dashboard` to `/login`, redirect `/` to `/dashboard` (if cookie) or `/login` (if no cookie)
-- [X] T016 [P] Create root page `frontend/src/app/page.tsx` as redirect-only Server Component: check for `access_token` cookie via `cookies()`, redirect to `/dashboard` if present, redirect to `/login` if absent
+- [X] T015 [P] Implement `frontend/src/app/proxy.ts` route protection for `/dashboard` only: redirect unauthenticated requests to `/`; keep `/` public with no auth redirect
+- [X] T016 [P] Create root page `frontend/src/app/page.tsx` as a public Landing Page with CTA actions: "Get Started" → `/login` and "Create account" → `/register`
 
 **Checkpoint**: Foundation ready — UI primitives, API client, auth guard, and providers all exist. User story implementation can now begin.
 
@@ -75,14 +75,14 @@ Build a responsive Next.js 16+ frontend (App Router) that provides authenticated
 
 ### Implementation for User Story 1
 
-- [X] T017 [US1] Implement `useAuth` hook in `frontend/src/hooks/use-auth.ts` with `login()` → POST `/api/auth/login` → `router.push('/dashboard')` or 401 error; `register()` → POST `/api/auth/register` → `router.push('/dashboard')` or 409 error; `logout()` → POST `/api/auth/logout` → `queryClient.clear()` → `router.push('/login')`
+- [X] T017 [US1] Implement `useAuth` hook in `frontend/src/hooks/use-auth.ts` with `login()` → POST `/api/auth/login` → `router.push('/dashboard')` or 401 error; `register()` → POST `/api/auth/register` → `router.push('/dashboard')` or 409 error; `logout()` → POST `/api/auth/logout` → `queryClient.clear()` → `router.push('/')`
 - [X] T018 [P] [US1] Create `LoginForm` client component in `frontend/src/components/auth/LoginForm.tsx` with react-hook-form + zodResolver(authSchema), `<Input>` for email + password, `<Button>` with loading state, error display, `?reason=session_expired` banner
 - [X] T019 [P] [US1] Create `RegisterForm` client component in `frontend/src/components/auth/RegisterForm.tsx` with react-hook-form + zodResolver(authSchema), `<Input>` for email + password, `<Button>` with loading state, error display, "Already have an account?" link
 - [X] T020 [US1] Create `(auth)` route group layout in `frontend/src/app/(auth)/layout.tsx` with minimal centered card (max-width 400px), no nav bar, cookie check via `cookies()` → `redirect('/dashboard')` if authenticated
 - [X] T021 [P] [US1] Create login page in `frontend/src/app/(auth)/login/page.tsx` rendering `<LoginForm />` and reading `?reason` search param for session expiry message
 - [X] T022 [P] [US1] Create register page in `frontend/src/app/(auth)/register/page.tsx` rendering `<RegisterForm />`
 - [X] T023 [US1] Create UserProvider context in `frontend/src/providers/UserProvider.tsx` accepting `user: { id, email }` prop and exposing `useUser()` hook
-- [X] T024 [US1] Create `(dashboard)` route group layout RSC in `frontend/src/app/(dashboard)/layout.tsx` that fetches `GET /api/auth/me` with forwarded cookies, redirects to `/login` on 401, wraps children in `<UserProvider user={user}>`
+- [X] T024 [US1] Create `(dashboard)` route group layout RSC in `frontend/src/app/(dashboard)/layout.tsx` that fetches `GET /api/auth/me`, redirects to `/` on 401, wraps children in `<UserProvider user={user}>`
 - [X] T025 [US1] Create `NavBar` client component in `frontend/src/components/ui/NavBar.tsx` (`'use client'`) accepting `email: string` prop, rendering user email display and a logout button that calls `useAuth().logout()`; then import `<NavBar email={user.email} />` into the RSC `(dashboard)/layout.tsx` (hooks cannot be called in Server Components — NavBar must be a separate client component)
 
 **Checkpoint**: User Story 1 fully functional — register, login, logout, and redirect flows work end-to-end

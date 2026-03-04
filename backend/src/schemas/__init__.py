@@ -1,3 +1,4 @@
+# Task: T028 — Schema exports for task, user, and common response models
 from .task import TaskCreate, TaskUpdate, TaskResponse, FocusSessionRequest, TaskOverviewResponse
 from .user import UserCreate, UserLogin, UserResponse
 from .common import ErrorResponse, TokenResponse

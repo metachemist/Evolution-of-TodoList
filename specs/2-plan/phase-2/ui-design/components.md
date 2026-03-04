@@ -169,7 +169,7 @@
 - **Returns**: `{ login, register, logout, isLoading }`
 - `login(email, password)`: POST /api/auth/login → router.push('/dashboard')
 - `register(email, password)`: POST /api/auth/register → router.push('/dashboard')
-- `logout()`: POST /api/auth/logout → clear context → router.push('/login')
+- `logout()`: POST /api/auth/logout → clear context → router.push('/')
 
 #### useTasks
 - **Returns**: `{ tasks, isLoading, isError, error, refetch }`

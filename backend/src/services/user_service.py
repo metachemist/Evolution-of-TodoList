@@ -1,3 +1,4 @@
+# Task: T039 — User service helpers
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import Optional

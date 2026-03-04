@@ -1,3 +1,4 @@
+# Task: T032 — User request/response schemas
 from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import datetime
 from uuid import UUID

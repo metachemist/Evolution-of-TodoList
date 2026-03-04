@@ -133,7 +133,7 @@ backend/
 - **Cookie-Based Authentication**:
   - `COOKIE_NAME = "access_token"`, `ACCESS_TOKEN_MAX_AGE = 900` (15 min)
   - `COOKIE_SECURE` from env (false in dev, true in prod)
-  - `set_auth_cookie(response, token)`: Sets httpOnly, SameSite=Lax cookie on login/register
+  - `set_auth_cookie(response, token)`: Sets httpOnly, SameSite=None cookie on login/register
   - `clear_auth_cookie(response)`: Clears auth cookie on logout
   - `GET /api/auth/me`: Returns current user info from token (session check)
   - `POST /api/auth/logout`: Clears auth cookie (unauthenticated — clearing a non-existent cookie is harmless)

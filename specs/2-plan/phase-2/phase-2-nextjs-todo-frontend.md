@@ -1,11 +1,11 @@
 # Implementation Plan: Next.js Todo Frontend
 
 **Branch**: `006-nextjs-todo-frontend` | **Date**: 2026-02-13 | **Spec**: @specs/1-specify/phase-2/feature-02-nextjs-todo-frontend.md
-**Input**: Feature specification for a responsive, authenticated Todo frontend using Next.js App Router and httpOnly cookie-based authentication
+**Input**: Feature specification for a responsive, authenticated Todo frontend using Next.js App Router and hybrid JWT auth transport (Bearer header + cookie)
 
 ## Summary
 
-Build a responsive Next.js 16+ frontend (App Router) that provides authenticated task management by integrating with the existing FastAPI backend. Authentication uses httpOnly cookies set by the backend — the frontend never handles raw JWT tokens. All task mutations use optimistic updates with rollback on failure. The UI supports dark/light mode with persistent preference and meets WCAG 2.1 Level AA accessibility requirements.
+Build a responsive Next.js 16+ frontend (App Router) that provides authenticated task management by integrating with the existing FastAPI backend. Authentication uses hybrid transport: backend-set cookie support plus frontend Bearer-header requests using persisted token state. The app exposes a public Landing Page at `/` and sends users to auth entry routes via CTA actions. All task mutations use optimistic updates with rollback on failure. The UI supports dark/light mode with persistent preference and meets WCAG 2.1 Level AA accessibility requirements.
 
 ## Technical Context
 
@@ -40,7 +40,7 @@ Build a responsive Next.js 16+ frontend (App Router) that provides authenticated
 | Stateless services | PASS | Frontend is stateless; session state from cookie + backend |
 | User isolation | PASS | All task API calls scoped to authenticated user's ID |
 | WCAG 2.1 AA accessibility | PASS | Radix UI primitives, focus management, color contrast enforcement |
-| Authentication library: Better Auth | ⚠️ WAIVED | Constitution §2 mandates "Better Auth with JWT." Backend (branch `006-nextjs-todo-frontend`) was implemented with direct FastAPI custom JWT before this frontend feature was planned. Using httpOnly cookie + `GET /api/auth/me` instead. Formal amendment pending in `constitution.md`. |
+| Authentication library: Better Auth | ⚠️ WAIVED | Constitution §2 mandates "Better Auth with JWT." Backend (branch `006-nextjs-todo-frontend`) was implemented with direct FastAPI custom JWT before this frontend feature was planned. Using hybrid auth transport (Bearer + cookie) plus `GET /api/auth/me` instead. Formal amendment pending in `constitution.md`. |
 | Test framework: Jest | ⚠️ WAIVED | Constitution §Testing mandates Jest for JavaScript. Vitest used instead per ADR-005 (4× faster, native ESM, Next.js 16 official testing guide). Formal amendment pending. |
 
 **Gate Result: PASS with 2 documented waivers (see rows above). Waivers reflect pre-existing backend decisions, not new violations.**
@@ -265,7 +265,7 @@ frontend/
 | **Theming** | Tailwind CSS v4 + next-themes | CSS-first config, `localStorage` persistence, hydration-safe |
 | **Testing** | Vitest + RTL + Playwright | Vitest 4x faster than Jest. Playwright for cross-browser E2E |
 | **API Client** | Custom fetch wrapper | `credentials: 'include'`, error catalog mapping, 15s timeout |
-| **Auth Transport** | httpOnly cookie (backend-set) | XSS-safe. Frontend never handles JWT. Browser sends cookie automatically |
+| **Auth Transport** | Hybrid (`Authorization` Bearer + cookie fallback) | Matches backend precedence and current frontend implementation |
 
 ## Implementation Phases
 
@@ -276,7 +276,7 @@ frontend/
 **Components**:
 1. **Next.js 16 project initialization** — `create-next-app` with TypeScript strict, Tailwind v4, App Router
 2. **Root layout** — HTML shell, ThemeProvider (next-themes), QueryClientProvider, Sonner Toaster. MUST include a `<noscript>` element inside `<body>` with the message "This application requires JavaScript to run." to satisfy the spec edge case for no-JS browsers (no additional component needed — inline in `app/layout.tsx`).
-3. **proxy.ts** — Cookie-presence check for `/dashboard` and redirect logic
+3. **proxy.ts** — Route guard for `/dashboard` only (no redirect behavior on `/` landing route)
 4. **API client** (`lib/api-client.ts`) — Centralized fetch wrapper with `credentials: 'include'`, error normalization, error message catalog, and two distinct network failure cases:
    - **Timeout (>15s)**: `AbortSignal.timeout(15000)` triggers `AbortError` → display: *"The request is taking longer than expected. Please check your connection."* (spec edge case)
    - **No connection**: `fetch()` throws `TypeError` (network unreachable) → display: *"Unable to connect to the server. Please check your connection and try again."*
@@ -340,7 +340,7 @@ frontend/
 9. **use-auth hook** — Login, register, and logout actions with error handling:
    - `login(email, password)`: POST `/api/auth/login` → on success, `router.push('/dashboard')`; on 401 show field error "Invalid email or password"
    - `register(email, password)`: POST `/api/auth/register` → on success, `router.push('/dashboard')`; on 409 show field error "An account with this email already exists"
-   - `logout()`: POST `/api/auth/logout` → on success, call `queryClient.clear()` to wipe all cached task data, then `router.push('/login')`
+   - `logout()`: POST `/api/auth/logout` → on success, call `queryClient.clear()` to wipe all cached task data, then `router.push('/')`
 10. **Redirect logic** — In `(auth)/layout.tsx`, check for the `access_token` cookie using `cookies()`. If the cookie is present, `redirect('/dashboard')` immediately (before rendering login/register). This prevents authenticated users from seeing the auth pages on browser back-navigation.
 
 **Dependencies**: Phase A (API client, validation schemas, types, proxy.ts)
@@ -400,7 +400,7 @@ frontend/
    - `api-client.test.ts`: mock `fetch` to verify `REQUEST_TIMEOUT` on `AbortError`, `NETWORK_ERROR` on `TypeError`, correct error message strings, `credentials: 'include'` present on every call
    - `validations.test.ts`: valid/invalid inputs for all 4 Zod schemas (login, register, task create, task update); verify exact error messages match spec
 2. **Hook tests** (`__tests__/hooks/`) — Vitest + MSW:
-   - `use-auth.test.ts`: login success → redirect `/dashboard`; login 401 → field error; logout → `queryClient.clear()` + redirect `/login`
+   - `use-auth.test.ts`: login success → redirect `/dashboard`; login 401 → field error; logout → `queryClient.clear()` + redirect `/`
    - `use-tasks.test.ts`: fetch renders task list; create optimistically prepends + temp ID replaced on settle; toggle flips completed; delete removes item; `onError` triggers rollback
 3. **Component tests** (`__tests__/components/`) — Vitest + RTL:
    - `LoginForm.test.tsx`: submits with valid data; shows field error on 401; disables submit button during loading
@@ -445,17 +445,17 @@ frontend/
 
 ## Design Decisions Requiring Documentation
 
-### ADR-001: httpOnly Cookie Authentication (No Bearer Header)
+### ADR-001: Hybrid JWT Transport (Bearer + Cookie)
 
-**Context**: The backend supports both Bearer token and httpOnly cookie authentication. The frontend must choose one transport mechanism.
+**Context**: The backend supports both Bearer token and cookie authentication.
 
-**Decision**: Use httpOnly cookies exclusively. The frontend never handles raw JWT tokens. All API calls use `credentials: 'include'` to let the browser attach the cookie automatically.
+**Decision**: Use hybrid transport. Frontend sends `Authorization: Bearer <token>` when persisted token is available and also enables `credentials: 'include'` for cookie-compatible flows.
 
 **Consequences**:
-- The frontend cannot read the JWT payload (user ID, expiration) — must call `GET /api/auth/me` instead
+- `GET /api/auth/me` remains the canonical server-validated identity endpoint for route protection and session hydration
 - Server Components must explicitly forward cookies when making server-to-server API calls via `cookies()` API
 - CORS must be configured with `allow_credentials=True` and a specific origin (not `*`)
-- Stronger XSS protection since tokens are never in JavaScript-accessible storage
+- Cookie transport remains available for browser-compatible session flows and server-rendered checks
 
 ### ADR-002: TanStack Query for All Server State
 
@@ -513,10 +513,10 @@ The existing FastAPI backend (branch `006-nextjs-todo-frontend`) already provide
 
 | Endpoint | Status | Notes |
 |---|---|---|
-| `POST /api/auth/register` | Exists | Sets httpOnly cookie + JSON response |
-| `POST /api/auth/login` | Exists | Sets httpOnly cookie + JSON response |
-| `GET /api/auth/me` | Exists | Returns `{ id, email }` from cookie |
-| `POST /api/auth/logout` | Exists | Clears httpOnly cookie |
+| `POST /api/auth/register` | Exists | Sets auth cookie (`SameSite=None`) + JSON response with token |
+| `POST /api/auth/login` | Exists | Sets auth cookie (`SameSite=None`) + JSON response with token |
+| `GET /api/auth/me` | Exists | Accepts Bearer header first, cookie fallback; returns `{ id, email }` |
+| `POST /api/auth/logout` | Exists | Clears auth cookie |
 | `GET /api/{user_id}/tasks` | Exists | Paginated, newest-first |
 | `POST /api/{user_id}/tasks` | Exists | Creates task |
 | `GET /api/{user_id}/tasks/{task_id}` | Exists | Get single task |
@@ -524,6 +524,6 @@ The existing FastAPI backend (branch `006-nextjs-todo-frontend`) already provide
 | `DELETE /api/{user_id}/tasks/{task_id}` | Exists | Delete task |
 | `PATCH /api/{user_id}/tasks/{task_id}/complete` | Exists | Toggle completion |
 
-The backend accepts auth from both `Authorization: Bearer` header and `access_token` httpOnly cookie (cookie-first priority per `get_current_user_id` in `utils/auth.py`). CORS is configured for `http://localhost:3000` with `allow_credentials=True`.
+The backend accepts auth from both `Authorization: Bearer` header and `access_token` cookie (header-first precedence). CORS is configured for `http://localhost:3000` with `allow_credentials=True`.
 
 No backend modifications are required for the frontend feature.

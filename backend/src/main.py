@@ -1,6 +1,8 @@
 # Task: T011 — CORS fix (no wildcard) and AppException global handler
 # Task: T010 — Imports AppException from error_mapper
 # Spec: @specs/1-specify/phase-2/feature-03-auth-db-monorepo.md (SEC-008, FR-015)
+import json
+import logging
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -16,14 +18,20 @@ from src.utils.error_mapper import AppException, InternalError, map_exception_to
 from src.middleware.rate_limit import RateLimitMiddleware
 from src.database import async_engine
 
+logger = logging.getLogger("focentra.api")
+
+
+def _log_event(event: str, **fields: str) -> None:
+    logger.info(json.dumps({"event": event, **fields}, separators=(",", ":")))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for startup and shutdown events."""
-    print("Starting up the application...")
+    _log_event("application_startup")
     yield
     await async_engine.dispose()
-    print("Shutting down the application...")
+    _log_event("application_shutdown")
 
 
 # Create FastAPI app

@@ -19,8 +19,8 @@ A new user visits the application and creates an account by providing their emai
 
 1. **Given** an unauthenticated user on the registration page, **When** they submit a valid email and password (8+ characters), **Then** they receive a JWT token and are redirected to the dashboard.
 2. **Given** an unauthenticated user on the login page, **When** they submit valid credentials, **Then** they receive a JWT token and are redirected to the dashboard.
-3. **Given** an unauthenticated user, **When** they attempt to access the dashboard directly, **Then** they are redirected to the login page.
-4. **Given** an authenticated user, **When** they click logout, **Then** their token is cleared, state is reset, and they are redirected to the login page.
+3. **Given** an unauthenticated user, **When** they attempt to access the dashboard directly, **Then** they are redirected to the landing page (`/`).
+4. **Given** an authenticated user, **When** they click logout, **Then** their token is cleared, state is reset, and they are redirected to the landing page (`/`).
 5. **Given** a user on the registration page, **When** they submit an email that already exists, **Then** they see the message: "An account with this email already exists. Please log in instead."
 6. **Given** a user on the login page, **When** they submit invalid credentials, **Then** they see the message: "Invalid email or password. Please try again."
 
@@ -130,12 +130,12 @@ A user can switch between dark and light themes for comfortable viewing in diffe
 
 ### Session 2026-02-13
 
-- Q: How should the JWT token be stored — in-memory, httpOnly cookie (frontend-set), httpOnly cookie (backend-set), or sessionStorage? → A: HttpOnly cookie set by the backend (Option C). Backend sets Set-Cookie header on login/register responses. Frontend never handles raw tokens. Requires new backend endpoints: `GET /api/auth/me` (session check) and `POST /api/auth/logout` (cookie clearing).
+- Q: How should the JWT token be stored — in-memory, httpOnly cookie (frontend-set), httpOnly cookie (backend-set), or sessionStorage? → A: Hybrid transport aligned with implementation. Backend sets Set-Cookie on login/register, and the frontend also persists the access token for API calls that send `Authorization: Bearer <token>`. The frontend still uses `GET /api/auth/me` for session check and `POST /api/auth/logout` for logout.
 - Q: What UX pattern should task create and edit forms use — inline, modal, slide-out panel, or separate page? → A: Modal dialog (Option B). Both create and edit open a centered modal overlay. Consistent with the delete confirmation modal pattern. Modal closes on success, stays open on validation/backend errors.
 - Q: Should UI updates be optimistic (update before backend confirms) or pessimistic (wait for confirmation)? → A: Optimistic for all mutations (Option A). UI updates immediately on user action; rolls back with a non-blocking error toast (5 seconds, dismissible) if the backend rejects the request.
 - Q: How should long task descriptions be displayed in the list view? → A: Truncate to 2 lines with ellipsis (Option B). Consistent card heights. Full description accessible only in the edit modal.
 - Q: What happens to focus and user feedback after a modal closes on success? → A: Toast notification (Option B). Focus returns to trigger element. Non-blocking success toast for 3 seconds ("Task created" / "Task updated" / "Task deleted"). No toast for toggle completion.
-- Q: How should task endpoints authenticate requests — httpOnly cookie or Bearer header? → A: Cookie auth for all endpoints (Option A). Backend reads JWT from the httpOnly cookie for task endpoints too. Frontend uses `credentials: 'include'` on all fetch calls. No Authorization header is needed. The `{user_id}` path parameter is validated server-side against the cookie's JWT `sub` claim.
+- Q: How should task endpoints authenticate requests — httpOnly cookie or Bearer header? → A: Dual-auth (Option C): backend accepts both `Authorization: Bearer` header and `access_token` cookie. Frontend sends Bearer header when a persisted token is available and also uses `credentials: 'include'`. The `{user_id}` path parameter is validated server-side against the authenticated JWT `sub` claim.
 
 ## Non-Goals
 
@@ -196,12 +196,18 @@ The application is NOT required to support Internet Explorer or any browser vers
 
 | Path | Behavior | Auth Required |
 |------|----------|---------------|
-| `/` | Redirect to `/dashboard` if authenticated, otherwise redirect to `/login` | No |
+| `/` | Render public Landing Page with CTA buttons to `/login` and `/register` (registration) | No |
 | `/login` | Render login form. Redirect to `/dashboard` if already authenticated. | No (redirects if auth) |
 | `/register` | Render registration form. Redirect to `/dashboard` if already authenticated. | No (redirects if auth) |
-| `/dashboard` | Render task management interface. Redirect to `/login` if not authenticated. | Yes |
+| `/dashboard` | Render task management interface. Redirect to `/` if not authenticated. | Yes |
 
 All other paths MUST return a 404 page with the message: "Page not found." and a link back to the dashboard.
+
+### Entry Flow
+
+1. User visits `/` and sees the public Landing Page.
+2. User clicks **Get Started** (to `/login`) or **Create account** (registration flow at `/register`).
+3. After successful auth, user is redirected to `/dashboard`.
 
 ## Backend API Contract
 
@@ -213,7 +219,7 @@ The frontend integrates with the existing FastAPI backend. The following endpoin
 - Method: `POST`
 - Path: `/api/auth/register`
 - Request body: `{ "email": "<valid email>", "password": "<string>" }`
-- Success response (201): `{ "access_token": "<jwt>", "token_type": "bearer" }` — Backend also sets an httpOnly, Secure, SameSite=Lax cookie containing the JWT.
+- Success response (201): `{ "access_token": "<jwt>", "token_type": "bearer" }` — Backend also sets an httpOnly, Secure, SameSite=None cookie containing the JWT.
 - Error responses:
   - 409: `{ "success": false, "data": null, "error": { "code": "EMAIL_ALREADY_EXISTS", "message": "A user with this email already exists" } }`
 
@@ -221,28 +227,28 @@ The frontend integrates with the existing FastAPI backend. The following endpoin
 - Method: `POST`
 - Path: `/api/auth/login`
 - Request body: `{ "email": "<valid email>", "password": "<string>" }`
-- Success response (200): `{ "access_token": "<jwt>", "token_type": "bearer" }` — Backend also sets an httpOnly, Secure, SameSite=Lax cookie containing the JWT.
+- Success response (200): `{ "access_token": "<jwt>", "token_type": "bearer" }` — Backend also sets an httpOnly, Secure, SameSite=None cookie containing the JWT.
 - Error responses:
   - 401: `{ "success": false, "data": null, "error": { "code": "INVALID_CREDENTIALS", "message": "Invalid email or password" } }`
 
 **Get Current User (Session Check)**:
 - Method: `GET`
 - Path: `/api/auth/me`
-- Authentication: httpOnly cookie (attached automatically by browser)
+- Authentication: `Authorization: Bearer <token>` or `access_token` cookie
 - Success response (200): `{ "id": "<uuid>", "email": "<string>" }`
 - Error responses:
-  - 401: No valid cookie / expired token (frontend redirects to login)
+  - 401: No valid token / expired token (frontend redirects to login)
 
 **Logout**:
 - Method: `POST`
 - Path: `/api/auth/logout`
-- Authentication: httpOnly cookie (attached automatically by browser)
-- Success response (200): Backend clears the httpOnly cookie via Set-Cookie with expired date.
+- Authentication: Optional `Authorization: Bearer <token>` or `access_token` cookie
+- Success response (200): Backend clears the auth cookie via Set-Cookie with expired date.
 - Error responses: None (always succeeds; invalid/missing cookie still returns 200)
 
 ### Task Endpoints
 
-All task endpoints require authentication via the httpOnly cookie (attached automatically by the browser when the frontend uses `credentials: 'include'`). No `Authorization` header is needed. The `{user_id}` path parameter MUST match the authenticated user's ID (extracted from the JWT `sub` claim in the cookie).
+All task endpoints require authentication via `Authorization: Bearer <token>` or `access_token` cookie. If both are present, the header is used first. The `{user_id}` path parameter MUST match the authenticated user's ID (extracted from JWT `sub` claim).
 
 **List Tasks**:
 - Method: `GET`
@@ -324,10 +330,10 @@ All task endpoints require authentication via the httpOnly cookie (attached auto
 
 - **FR-001**: System MUST provide a registration page that accepts email and password and sends credentials to the backend registration endpoint.
 - **FR-002**: System MUST provide a login page that accepts email and password and sends credentials to the backend login endpoint.
-- **FR-003**: The backend MUST set the JWT access token as an httpOnly, Secure, SameSite=Lax cookie on successful login and registration responses. The frontend MUST NOT handle or store the raw token. The browser automatically attaches the cookie to all same-origin API requests.
-- **FR-004**: System MUST redirect unauthenticated users to the login page when they attempt to access protected routes (dashboard).
+- **FR-003**: The backend MUST set the JWT access token as an httpOnly, Secure, SameSite=None cookie on successful login and registration responses. The frontend MAY persist the access token for Bearer-header requests and MUST support cookie credentials for browser compatibility.
+- **FR-004**: System MUST redirect unauthenticated users to the landing page (`/`) when they attempt to access protected routes (dashboard).
 - **FR-005**: System MUST redirect authenticated users away from login and registration pages to the dashboard.
-- **FR-006**: System MUST provide a logout action that calls the backend to clear the httpOnly cookie, resets all frontend application state, and redirects to the login page.
+- **FR-006**: System MUST provide a logout action that calls the backend to clear auth session data, resets all frontend application state, and redirects to the landing page (`/`).
 - **FR-007**: System MUST fetch and display all tasks belonging to the authenticated user, ordered newest-first, when the dashboard loads.
 - **FR-008**: System MUST provide a task creation form in a modal dialog with a required title field (max 255 characters) and an optional description field (max 5000 characters). The modal is triggered by a "Create Task" button visible on the dashboard.
 - **FR-009**: System MUST allow users to create a new task. The modal MUST close immediately and the new task MUST appear at the top of the task list optimistically. If the backend rejects the request, the task MUST be removed from the list and an error toast MUST be displayed.
@@ -345,7 +351,7 @@ All task endpoints require authentication via the httpOnly cookie (attached auto
 - **FR-017**: System MUST be responsive and usable on mobile (< 768px), tablet (768px-1024px), and desktop (> 1024px) viewports.
 - **FR-018**: All backend communication MUST go through a single integration layer that handles authentication, error normalization, and base URL configuration consistently.
 - **FR-019**: System MUST display an empty state UI with an icon and the message "No tasks yet. Create your first task to get started." when the user has no tasks.
-- **FR-020**: System MUST identify the authenticated user (via a backend endpoint or cookie-based session check) and use their identity when communicating with the backend for all user-scoped operations. Since the frontend cannot read the httpOnly cookie directly, the backend MUST provide a session/identity endpoint that returns the current user's ID and email.
+- **FR-020**: System MUST identify the authenticated user (via backend endpoint and token-based session check) and use their identity when communicating with the backend for all user-scoped operations. The backend MUST provide a session/identity endpoint that returns the current user's ID and email.
 - **FR-021**: Completed tasks MUST be visually distinguished from incomplete tasks using a strikethrough on the title and reduced opacity.
 - **FR-024**: Task descriptions in the list view MUST be truncated to a maximum of 2 lines with an ellipsis ("...") when the content exceeds the available space. The full description is accessible only in the edit modal.
 - **FR-022**: All interactive elements MUST be operable via keyboard. Modals MUST trap focus when open and return focus to the trigger element when closed (the edit/delete button that opened the modal, or the "Create Task" button for create).
@@ -354,7 +360,7 @@ All task endpoints require authentication via the httpOnly cookie (attached auto
 
 ### Key Entities
 
-- **User Session**: Represents the authenticated user's session state, including the user ID and email (retrieved from a backend session endpoint). The JWT token is managed entirely by the browser as an httpOnly cookie and is never accessible to frontend code. Session state exists in frontend memory and is populated on app load by calling the backend identity endpoint.
+- **User Session**: Represents the authenticated user's session state, including user ID and email (retrieved from backend session endpoint). The JWT may be transported by Bearer header and/or cookie. Session state exists in frontend memory and is populated on app load by calling the backend identity endpoint.
 - **Task**: Represents a to-do item belonging to a user, with attributes: unique identifier (UUID), title (string, required, max 255), optional description (string, max 5000), completion status (boolean), creation timestamp, and last-updated timestamp. Owned by exactly one user.
 - **API Error**: Represents a structured error response from the backend, with attributes: success flag (always false), error code (string constant), and human-readable message.
 
@@ -372,9 +378,9 @@ The following artifacts MUST be produced as part of this feature:
 
 - The backend API is running and accessible at a configurable base URL (environment variable).
 - JWT tokens use the HS256 algorithm and contain a `sub` claim with the user's UUID.
-- The backend sets the JWT as an httpOnly, Secure, SameSite=Lax cookie on login and registration. The JSON response body also contains the token for backward compatibility, but the frontend MUST NOT read or store it. All endpoints (including task endpoints) accept the cookie for authentication; no Authorization header is required.
-- The backend provides `GET /api/auth/me` to return the authenticated user's ID and email based on the cookie. This endpoint is required for the frontend to identify the user without reading the token.
-- The backend provides `POST /api/auth/logout` to clear the httpOnly cookie.
+- The backend sets the JWT as an httpOnly, Secure, SameSite=None cookie on login and registration. The JSON response body contains the token and the frontend may persist it for `Authorization: Bearer` requests. Endpoints accept both Bearer headers and cookies.
+- The backend provides `GET /api/auth/me` to return the authenticated user's ID and email based on the active auth credential (Bearer header or cookie). This endpoint is required for frontend identity hydration.
+- The backend provides `POST /api/auth/logout` to clear the auth cookie.
 - Task list endpoints return an array of task objects directly (not wrapped in a pagination envelope).
 - The backend CORS configuration allows requests from the frontend's origin with `credentials: include` support.
 - Token expiration is 15 minutes, handled by the backend returning 401. The frontend does not refresh tokens.

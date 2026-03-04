@@ -1,3 +1,4 @@
+# Task: T031 — Common API response schemas
 from pydantic import BaseModel
 from typing import Any, Optional
 

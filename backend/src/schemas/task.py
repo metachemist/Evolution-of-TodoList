@@ -1,3 +1,4 @@
+# Task: T028/T029/T030 — Task request/response schemas
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional
 from datetime import datetime

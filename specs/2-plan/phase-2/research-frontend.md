@@ -12,15 +12,15 @@
 - Pages Router: Legacy, lacks RSC and streaming. Constitution mandates modern Next.js.
 - Middleware-only auth: Insecure per CVE-2025-29927 and Next.js 16 guidance.
 
-## 2. Authentication with httpOnly Cookies
+## 2. Authentication with Hybrid JWT Transport
 
-**Decision**: Frontend uses `credentials: 'include'` on all fetch calls. Dashboard layout RSC calls `GET /api/auth/me` with forwarded cookie to validate session and get user identity.
+**Decision**: Frontend uses hybrid transport: `Authorization: Bearer <token>` when available, plus `credentials: 'include'` for cookie-compatible requests. Dashboard layout RSC calls `GET /api/auth/me` to validate session and get user identity.
 
-**Rationale**: The backend already sets httpOnly, Secure, SameSite=Lax cookies. The frontend cannot (and should not) read the JWT. The `cookies()` API in Next.js Server Components allows forwarding the cookie in server-to-server calls. `proxy.ts` performs a fast cookie-presence check; real validation is in the layout.
+**Rationale**: The backend supports Bearer-first auth with cookie fallback and sets `SameSite=None` cookies on session creation. The `cookies()` API in Next.js Server Components allows forwarding cookie state in server-to-server calls, while client fetches can attach Bearer credentials. `proxy.ts` performs coarse route gating for `/dashboard`; real validation is in the layout.
 
 **Alternatives considered**:
 - Auth.js (NextAuth): Over-engineered — backend owns auth, no need for Auth.js providers/adapters.
-- localStorage/sessionStorage JWT: Vulnerable to XSS. Spec mandates httpOnly cookies.
+- Cookie-only transport: Rejected because implementation already uses Bearer header + cookie fallback.
 - iron-session: Not needed — backend owns JWT lifecycle.
 
 ## 3. State Management
